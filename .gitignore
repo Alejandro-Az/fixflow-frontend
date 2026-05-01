@@ -31,13 +31,26 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.*.local
+.env.production
 
 # typescript
 *.tsbuildinfo
 
-app-example
-
 # generated native folders
 /ios
 /android
+
+# Artefactos de agentes de IA (no pertenecen al repo)
+.gemini/
+CONTEXT.md
+IMPLEMENTATION_PLAN.md
+PROGRESS.md
+AGENT_PROMPT.md
+task.md
+smoke_tests.md
+
+# Archivos de ejemplo generados por Expo CLI
+app-example/
