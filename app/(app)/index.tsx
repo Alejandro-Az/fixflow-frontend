@@ -10,16 +10,15 @@ import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicat
 import { CircleUser, Plus, ArrowRight, LogOut, User, X } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { useRouter } from 'expo-router';
+import { HeaderProfileMenu } from '../../src/components/HeaderProfileMenu';
 
 export default function DashboardScreen() {
+    const router = useRouter();
     const { user, logout } = useAuthStore();
     const [workspaces, setWorkspaces] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Estado del menú de perfil
-    const [menuVisible, setMenuVisible] = useState(false);
-    const [menuPos, setMenuPos] = useState({ top: 64, right: 20 });
-    const profileBtnRef = useRef<any>(null);
 
     // Estado del modal de creación de workspace
     const [createVisible, setCreateVisible] = useState(false);
@@ -45,22 +44,6 @@ export default function DashboardScreen() {
         fetchWorkspaces();
     }, []);
 
-    const openMenu = () => {
-        profileBtnRef.current?.measure(
-            (_fx: number, _fy: number, w: number, h: number, px: number, py: number) => {
-                const screenWidth = Dimensions.get('window').width;
-                // Alinear el borde derecho del menú con el borde derecho del botón
-                const rightOffset = screenWidth - px - w;
-                setMenuPos({ top: py + h + 6, right: rightOffset });
-                setMenuVisible(true);
-            }
-        );
-    };
-
-    const handleLogout = async () => {
-        setMenuVisible(false);
-        await logout();
-    };
 
     const openCreateModal = () => {
         setWsName('');
@@ -115,9 +98,7 @@ export default function DashboardScreen() {
                     {/* Header Superior */}
                     <View className="flex-row justify-between items-center mb-8 mt-4">
                         <Text className="text-text font-bold text-2xl tracking-tight">FixFlow</Text>
-                        <TouchableOpacity ref={profileBtnRef} onPress={openMenu} className="active:opacity-60">
-                            <CircleUser color="#e5e2e1" size={28} />
-                        </TouchableOpacity>
+                        <HeaderProfileMenu />
                     </View>
 
                     {/* Título de Sección y Botón Agregar */}
@@ -142,7 +123,11 @@ export default function DashboardScreen() {
                                 <Text className="text-textMuted text-center py-8">No tienes workspaces aún.</Text>
                             ) : (
                                 workspaces.map((ws: any, index: number) => (
-                                    <TouchableOpacity key={ws.id || index} className="bg-surface border border-border rounded-xl p-5 active:opacity-80">
+                                    <TouchableOpacity 
+                                        key={ws.id || index} 
+                                        className="bg-surface border border-border rounded-xl p-5 active:opacity-80"
+                                        onPress={() => router.push(`/workspace/${ws.id}?name=${encodeURIComponent(ws.name)}`)}
+                                    >
                                         <Text className="text-text font-bold text-lg mb-1">{ws.name}</Text>
                                         <Text className="text-textMuted text-sm mb-4">
                                             Creado el {ws.created_at ? new Date(ws.created_at).toLocaleDateString('es-ES') : 'recientemente'}
@@ -173,51 +158,6 @@ export default function DashboardScreen() {
 
                 </View>{/* /max-w-3xl */}
             </ScrollView>
-
-            {/* ─── Menú desplegable de perfil ─── */}
-            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-                <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
-                    <RNView style={{ flex: 1 }}>
-                        <RNView style={{
-                            position: 'absolute',
-                            top: menuPos.top,
-                            right: menuPos.right,
-                            backgroundColor: '#2a2a2a',
-                            borderRadius: 10,
-                            borderWidth: 1,
-                            borderColor: '#444444',
-                            minWidth: 220,
-                            shadowColor: '#000',
-                            shadowOpacity: 0.4,
-                            shadowRadius: 8,
-                            elevation: 8,
-                            overflow: 'hidden',
-                        }}>
-                            {/* Info del usuario */}
-                            <RNView style={{ paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
-                                <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                    <User color="#94918e" size={16} />
-                                    <RNView>
-                                        <Text className="text-text font-semibold text-sm">{user?.name ?? 'Usuario'}</Text>
-                                        <Text className="text-textMuted text-xs">{user?.email ?? ''}</Text>
-                                    </RNView>
-                                </RNView>
-                                <RNView style={{ backgroundColor: '#1e3a5f', borderColor: '#2a4d7a', borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 2, alignSelf: 'flex-start' }}>
-                                    <Text className="text-[#9acbff] text-xs font-medium capitalize">Plan {user?.plan ?? 'free'}</Text>
-                                </RNView>
-                            </RNView>
-
-                            {/* Cerrar sesión */}
-                            <TouchableOpacity onPress={handleLogout}>
-                                <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
-                                    <LogOut color="#ff8a80" size={16} />
-                                    <Text className="text-[#ff8a80] font-medium text-sm">Cerrar sesión</Text>
-                                </RNView>
-                            </TouchableOpacity>
-                        </RNView>
-                    </RNView>
-                </TouchableWithoutFeedback>
-            </Modal>
 
             {/* ─── Modal: Crear Workspace ─── */}
             <Modal visible={createVisible} transparent animationType="fade" onRequestClose={() => setCreateVisible(false)}>

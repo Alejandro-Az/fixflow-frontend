@@ -13,9 +13,11 @@ import {
     TextInput as RNTextInput,
     ScrollView as RNScrollView,
     KeyboardAvoidingView as RNKeyboardAvoidingView,
-    SafeAreaView as RNSafeAreaView,
     ActivityIndicator as RNActivityIndicator,
+    Pressable as RNPressable,
+    Image as RNImage,
 } from 'react-native';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 
 export const View = cssInterop(RNView, { className: 'style' });
 export const Text = cssInterop(RNText, { className: 'style' });
@@ -25,3 +27,5 @@ export const ScrollView = cssInterop(RNScrollView, { className: 'style' });
 export const KeyboardAvoidingView = cssInterop(RNKeyboardAvoidingView, { className: 'style' });
 export const SafeAreaView = cssInterop(RNSafeAreaView, { className: 'style' });
 export const ActivityIndicator = cssInterop(RNActivityIndicator, { className: 'style' });
+export const Pressable = cssInterop(RNPressable, { className: 'style' });
+export const Image = cssInterop(RNImage, { className: 'style' });

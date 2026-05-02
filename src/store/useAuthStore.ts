@@ -11,7 +11,7 @@
  */
 import { create } from 'zustand';
 import { storage } from '../api/storage';
-import apiClient from '../api/client';
+import apiClient, { setApiToken } from '../api/client';
 
 export interface User {
     id: string;
@@ -42,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     setAuth: async (token: string, user: User) => {
         await storage.setItem('jwt_token', token);
         await storage.setItem('user_data', JSON.stringify(user));
+        setApiToken(token);
         set({ token, user });
     },
 
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
         await storage.deleteItem('jwt_token');
         await storage.deleteItem('user_data');
+        setApiToken(null);
         set({ token: null, user: null });
     },
 
@@ -71,9 +73,12 @@ export const useAuthStore = create<AuthState>((set) => ({
             const userData = await storage.getItem('user_data');
 
             if (!token || !userData) {
+                setApiToken(null);
                 set({ isHydrated: true });
                 return;
             }
+
+            setApiToken(token);
 
             // Validar token con el backend (refresca el plan y datos del usuario)
             try {
@@ -92,6 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     // Token revocado o expirado — limpiar sesión local
                     await storage.deleteItem('jwt_token');
                     await storage.deleteItem('user_data');
+                    setApiToken(null);
                     set({ token: null, user: null, isHydrated: true });
                     return;
                 }

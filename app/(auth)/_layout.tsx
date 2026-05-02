@@ -1,16 +1,15 @@
 import { Redirect, Stack } from "expo-router";
 import { useAuthStore } from "../../src/store/useAuthStore";
 
-export default function AppLayout() {
+export default function AuthLayout() {
   const { token, isHydrated } = useAuthStore();
 
-  // Esperar hidratación para evitar redirecciones prematuras.
   if (!isHydrated) {
     return null;
   }
 
-  if (!token) {
-    return <Redirect href="/(auth)/login" />;
+  if (token) {
+    return <Redirect href="/(app)" />;
   }
 
   return (
