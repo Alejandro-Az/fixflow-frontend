@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { storage } from './storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -7,59 +6,69 @@ const API_PORT = 8000;
 const API_PREFIX = '/api/v1';
 
 /**
- * Resuelve la URL base del API según el entorno:
+ * Determina la base URL de la API.
  *
- * - Web: siempre localhost (el navegador está en la misma máquina)
- * - Dev en dispositivo físico (Android/iOS): usa la misma IP del servidor
- *   de Metro Bundler, que corre en la misma PC que el backend.
- * - Android emulator: 10.0.2.2 (alias del host desde el emulador)
- * - iOS simulator: localhost
+ * Orden de prioridad:
+ * 1. EXPO_PUBLIC_API_URL en .env (recomendado para producción y staging)
+ * 2. Detección automática del host de Metro para desarrollo nativo
+ * 3. Fallback por plataforma (Android emulator / iOS simulator / web)
  */
 function getBaseUrl(): string {
+    // 1. Variable de entorno explícita (se lee en build time por Expo)
+    const envUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (envUrl) {
+        return envUrl;
+    }
+
+    // 2. En web siempre localhost (misma máquina)
     if (Platform.OS === 'web') {
         return `http://localhost:${API_PORT}${API_PREFIX}`;
     }
 
+    // 3. En desarrollo nativo: usar el host donde corre Metro
     if (__DEV__) {
-        // hostUri tiene el formato "192.168.x.x:8081" — tomamos solo la IP
         const metroHost = Constants.expoConfig?.hostUri?.split(':').shift();
         if (metroHost && metroHost !== 'localhost') {
             return `http://${metroHost}:${API_PORT}${API_PREFIX}`;
         }
     }
 
-    // Fallback por plataforma
+    // 4. Fallback por plataforma
     if (Platform.OS === 'android') return `http://10.0.2.2:${API_PORT}${API_PREFIX}`;
     return `http://localhost:${API_PORT}${API_PREFIX}`;
 }
 
 const BASE_URL = getBaseUrl();
 
-if (__DEV__) {
-    console.log(`[API] Base URL → ${BASE_URL}`);
-}
-
-export const apiClient = axios.create({
+const apiClient = axios.create({
     baseURL: BASE_URL,
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
+        Accept: 'application/json',
+    },
 });
 
-// Interceptor: inyecta Bearer token en cada petición
-apiClient.interceptors.request.use(async (config) => {
+let currentToken: string | null = null;
+
+export const setApiToken = (token: string | null) => {
+    currentToken = token;
+};
+
+apiClient.interceptors.request.use((config) => {
     try {
-        const token = await storage.getItem('jwt_token');
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (currentToken && config.headers) {
+            config.headers.Authorization = `Bearer ${currentToken}`;
         }
-        if (__DEV__) {
-            console.log(`[API] ${config.method?.toUpperCase()} → ${config.baseURL}${config.url}`);
-        }
-    } catch (e) {}
+    } catch {
+    }
+
     return config;
 });
+
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => Promise.reject(error)
+);
 
 export default apiClient;

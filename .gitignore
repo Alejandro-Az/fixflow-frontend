@@ -51,6 +51,10 @@ PROGRESS.md
 AGENT_PROMPT.md
 task.md
 smoke_tests.md
+*_REPORT.md
+testing_report.md
+IMPLEMENTATION_STATUS.md
+exports/
 
 # Archivos de ejemplo generados por Expo CLI
 app-example/

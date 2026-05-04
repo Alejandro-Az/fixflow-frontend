@@ -11,7 +11,7 @@
  */
 import { create } from 'zustand';
 import { storage } from '../api/storage';
-import apiClient from '../api/client';
+import apiClient, { setApiToken } from '../api/client';
 
 export interface User {
     id: string;
@@ -28,6 +28,7 @@ interface AuthState {
     setAuth: (token: string, user: User) => Promise<void>;
     logout: () => Promise<void>;
     hydrate: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -42,6 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     setAuth: async (token: string, user: User) => {
         await storage.setItem('jwt_token', token);
         await storage.setItem('user_data', JSON.stringify(user));
+        setApiToken(token);
         set({ token, user });
     },
 
@@ -57,7 +59,25 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
         await storage.deleteItem('jwt_token');
         await storage.deleteItem('user_data');
+        setApiToken(null);
         set({ token: null, user: null });
+    },
+
+    /**
+     * Refresca los datos del usuario desde GET /auth/me.
+     * Úsalo tras operaciones que cambian el plan (Stripe checkout).
+     */
+    refreshUser: async () => {
+        try {
+            const response = await apiClient.get('/auth/me');
+            if (response.data.ok) {
+                const freshUser: User = response.data.data;
+                await storage.setItem('user_data', JSON.stringify(freshUser));
+                set({ user: freshUser });
+            }
+        } catch {
+            // Silencioso: si falla el refresh no cerramos sesión
+        }
     },
 
     /**
@@ -71,9 +91,12 @@ export const useAuthStore = create<AuthState>((set) => ({
             const userData = await storage.getItem('user_data');
 
             if (!token || !userData) {
+                setApiToken(null);
                 set({ isHydrated: true });
                 return;
             }
+
+            setApiToken(token);
 
             // Validar token con el backend (refresca el plan y datos del usuario)
             try {
@@ -92,6 +115,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     // Token revocado o expirado — limpiar sesión local
                     await storage.deleteItem('jwt_token');
                     await storage.deleteItem('user_data');
+                    setApiToken(null);
                     set({ token: null, user: null, isHydrated: true });
                     return;
                 }
