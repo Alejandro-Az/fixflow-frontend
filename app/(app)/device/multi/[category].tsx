@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from '../../../../src/components/ui';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, X as XIcon } from 'lucide-react-native';
 import apiClient from '../../../../src/api/client';
 import { HeaderProfileMenu } from '../../../../src/components/HeaderProfileMenu';
 import { CATEGORY_COLORS } from '../../../../components/ui/CategoryRow';
+import { useAuthStore } from '../../../../src/store/useAuthStore';
 
 const CATEGORY_LABELS: Record<string, string> = {
     cpu: 'Procesador',
@@ -25,6 +26,8 @@ export default function MultiComponentScreen() {
     const categoryId = Array.isArray(category) ? category[0] : category;
     const resolvedDeviceName = Array.isArray(deviceName) ? deviceName[0] : deviceName;
     const router = useRouter();
+    const { user } = useAuthStore();
+    const isFreePlan = user?.plan === 'free';
     
     const [components, setComponents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,9 +58,11 @@ export default function MultiComponentScreen() {
         }
     };
 
-    useEffect(() => {
-        fetchComponents();
-    }, [deviceId, categoryId]);
+    useFocusEffect(
+        useCallback(() => {
+            fetchComponents();
+        }, [deviceId, categoryId])
+    );
 
     const handleDelete = (componentId: string, name: string) => {
         Alert.alert(
@@ -157,16 +162,27 @@ export default function MultiComponentScreen() {
                                 </TouchableOpacity>
                             ))}
 
-                            <TouchableOpacity
-                                onPress={() => router.push(`/device/component/${categoryId}?id=${deviceId}&deviceName=${encodeURIComponent(resolvedDeviceName as string)}` as any)}
-                                className="w-full py-4 rounded-xl border border-dashed items-center flex-row justify-center mt-2 active:opacity-80 transition-opacity"
-                                style={{ borderColor: CATEGORY_COLORS[categoryId as string] || '#444444' }}
-                            >
-                                <Plus color={CATEGORY_COLORS[categoryId as string] || "#6699cc"} size={16} className="mr-2" />
-                                <Text className="font-medium text-[15px]" style={{ color: CATEGORY_COLORS[categoryId as string] || "#6699cc" }}>
-                                    {components.length === 0 ? "Agregar unidad" : "Agregar otra unidad"}
-                                </Text>
-                            </TouchableOpacity>
+                            {isFreePlan && components.length >= 1 ? (
+                                <View className="w-full py-4 rounded-xl border border-dashed items-center flex-col justify-center mt-2 border-border bg-[#1c1b1b]">
+                                    <Text className="text-textMuted text-[13px] text-center mb-2 px-4">
+                                        Has alcanzado el límite de 1 componente por categoría en el plan Free.
+                                    </Text>
+                                    <TouchableOpacity onPress={() => router.push('/plans' as any)} className="flex-row items-center active:opacity-80">
+                                        <Text className="text-primary font-medium text-[13px] mr-1">Mejorar a Pro</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    onPress={() => router.push(`/device/component/${categoryId}?id=${deviceId}&deviceName=${encodeURIComponent(resolvedDeviceName as string)}` as any)}
+                                    className="w-full py-4 rounded-xl border border-dashed items-center flex-row justify-center mt-2 active:opacity-80 transition-opacity"
+                                    style={{ borderColor: CATEGORY_COLORS[categoryId as string] || '#444444' }}
+                                >
+                                    <Plus color={CATEGORY_COLORS[categoryId as string] || "#6699cc"} size={16} className="mr-2" />
+                                    <Text className="font-medium text-[15px]" style={{ color: CATEGORY_COLORS[categoryId as string] || "#6699cc" }}>
+                                        {components.length === 0 ? "Agregar unidad" : "Agregar otra unidad"}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     )}
                 </ScrollView>

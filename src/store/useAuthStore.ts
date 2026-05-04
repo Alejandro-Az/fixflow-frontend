@@ -28,6 +28,7 @@ interface AuthState {
     setAuth: (token: string, user: User) => Promise<void>;
     logout: () => Promise<void>;
     hydrate: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -60,6 +61,23 @@ export const useAuthStore = create<AuthState>((set) => ({
         await storage.deleteItem('user_data');
         setApiToken(null);
         set({ token: null, user: null });
+    },
+
+    /**
+     * Refresca los datos del usuario desde GET /auth/me.
+     * Úsalo tras operaciones que cambian el plan (Stripe checkout).
+     */
+    refreshUser: async () => {
+        try {
+            const response = await apiClient.get('/auth/me');
+            if (response.data.ok) {
+                const freshUser: User = response.data.data;
+                await storage.setItem('user_data', JSON.stringify(freshUser));
+                set({ user: freshUser });
+            }
+        } catch {
+            // Silencioso: si falla el refresh no cerramos sesión
+        }
     },
 
     /**

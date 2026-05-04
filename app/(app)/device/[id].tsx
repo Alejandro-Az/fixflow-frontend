@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { Alert, ActivityIndicator, Modal, TouchableWithoutFeedback, View as RNView, Dimensions, TextInput } from 'react-native';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from '../../../src/components/ui';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Trash2 } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { ArrowLeft, Trash2, MoreVertical, Pencil, X, Lock } from 'lucide-react-native';
 import apiClient from '../../../src/api/client';
+import { useAuthStore } from '../../../src/store/useAuthStore';
 import { HeaderProfileMenu } from '../../../src/components/HeaderProfileMenu';
 import { CategoryRow, ComponentCategory } from '../../../components/ui/CategoryRow';
 
@@ -26,6 +27,8 @@ export default function DeviceDetailScreen() {
     const deviceId = Array.isArray(id) ? id[0] : id;
     const deviceName = Array.isArray(name) ? name[0] : name;
     const router = useRouter();
+    const { user } = useAuthStore();
+    const isFreePlan = user?.plan === 'free';
 
     const [device, setDevice] = useState<any>(null);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -33,6 +36,78 @@ export default function DeviceDetailScreen() {
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [startingWizard, setStartingWizard] = useState(false);
     const [activeTab, setActiveTab] = useState<'components' | 'info'>('components');
+
+    const [localDeviceName, setLocalDeviceName] = useState(deviceName as string);
+
+    // Menu options
+    const [optionsVisible, setOptionsVisible] = useState(false);
+    const [menuPos, setMenuPos] = useState({ top: 64, right: 20 });
+    const optionsBtnRef = useRef<any>(null);
+
+    // Edit Device
+    const [editVisible, setEditVisible] = useState(false);
+    const [editName, setEditName] = useState(deviceName as string);
+    const [editing, setEditing] = useState(false);
+    const [editError, setEditError] = useState("");
+
+    const openOptionsMenu = () => {
+        optionsBtnRef.current?.measure(
+            (_fx: number, _fy: number, w: number, h: number, px: number, py: number) => {
+                const screenWidth = Dimensions.get("window").width;
+                const rightOffset = screenWidth - px - w;
+                setMenuPos({ top: py + h + 6, right: rightOffset });
+                setOptionsVisible(true);
+            }
+        );
+    };
+
+    const handleEditDevice = async () => {
+        const newName = editName.trim();
+        if (!newName) {
+            setEditError("El nombre no puede estar vacio.");
+            return;
+        }
+        setEditing(true);
+        setEditError("");
+        try {
+            const response = await apiClient.put(`/devices/${deviceId}`, { name: newName });
+            if (response.data.ok) {
+                setLocalDeviceName(newName);
+                router.setParams({ name: newName });
+                setEditVisible(false);
+            } else {
+                setEditError("No se pudo editar el equipo.");
+            }
+        } catch (error: any) {
+            setEditError(error.response?.data?.error?.message || "Error al editar.");
+        } finally {
+            setEditing(false);
+        }
+    };
+
+    // Delete Device state
+    const [deleteVisible, setDeleteVisible] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+
+    const handleDeleteDevice = async () => {
+        setDeleting(true);
+        setDeleteError("");
+        try {
+            const response = await apiClient.delete(`/devices/${deviceId}`);
+            if (response.data.ok) {
+                setDeleteVisible(false);
+                router.replace('/');
+            } else {
+                setDeleteError("No se pudo eliminar el equipo.");
+            }
+        } catch (error: any) {
+            console.error('Error deleting device', error);
+            setDeleteError(error.response?.data?.error?.message || "Error al eliminar.");
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     const presentCategories = device?.components?.map((component: any) => component.category) || [];
     const missingCategories = REQUIRED_CATEGORIES.filter((category) => !presentCategories.includes(category));
@@ -52,6 +127,7 @@ export default function DeviceDetailScreen() {
 
             if (deviceRes.data?.ok && deviceRes.data?.data) {
                 setDevice(deviceRes.data.data);
+                setLocalDeviceName(deviceRes.data.data.name);
                 setIsBootstrapping(false);
             } else {
                 setDevice(null);
@@ -88,34 +164,16 @@ export default function DeviceDetailScreen() {
         }
     };
 
-    useEffect(() => {
-        setIsBootstrapping(true);
-        fetchDeviceAndTimeline();
-    }, [deviceId]);
+    useFocusEffect(
+        useCallback(() => {
+            if (!device) setIsBootstrapping(true);
+            fetchDeviceAndTimeline();
+        }, [deviceId])
+    );
 
     const confirmDelete = () => {
-        Alert.alert(
-            'Eliminar equipo',
-            'Estas seguro que quieres eliminar este equipo? Se borraran todos sus componentes. Esta accion no se puede deshacer.',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Si, eliminar',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const response = await apiClient.delete(`/devices/${deviceId}`);
-                            if (response.data.ok) {
-                                router.back();
-                            }
-                        } catch (error) {
-                            console.error('Error deleting device', error);
-                            Alert.alert('Error', 'No se pudo eliminar el equipo.');
-                        }
-                    },
-                },
-            ]
-        );
+        setDeleteError("");
+        setDeleteVisible(true);
     };
 
     const handleStartMaintenance = async () => {
@@ -188,9 +246,35 @@ export default function DeviceDetailScreen() {
             </Text>
 
             <Text className="text-textMuted text-[12px] uppercase font-semibold mb-1">Fecha de registro</Text>
-            <Text className="text-text text-[15px]">
+            <Text className="text-text text-[15px] mb-4">
                 {device?.created_at ? new Date(device?.created_at).toLocaleDateString() : '-'}
             </Text>
+
+            <View className="mt-2 pt-4 border-t border-border">
+                <View className="flex-row items-center mb-3">
+                    <Text className="text-textMuted text-[12px] uppercase font-semibold">Exportar</Text>
+                    {isFreePlan && <Lock color="#94918e" size={12} className="ml-2" />}
+                </View>
+                
+                {isFreePlan ? (
+                    <TouchableOpacity
+                        onPress={() => Alert.alert('Premium', 'Actualiza a Pro para exportar las especificaciones técnicas completas.')}
+                        className="bg-[#141313] border border-border rounded-lg py-3 px-4 items-center justify-center"
+                    >
+                        <Text className="text-[#94918e] font-medium">Solo disponible en plan Pro</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        onPress={async () => {
+                            const { exportFile } = await import('../../../src/utils/fileExport');
+                            await exportFile(`/devices/${deviceId}/exports/specs/excel`);
+                        }}
+                        className="bg-[#141313] border border-border rounded-lg py-3 px-4 flex-row items-center justify-center active:opacity-70"
+                    >
+                        <Text className="text-[#39ff14] font-medium">Descargar Especificaciones (CSV)</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 
@@ -212,7 +296,7 @@ export default function DeviceDetailScreen() {
                         <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
                             <ArrowLeft color="#e5e2e1" size={24} />
                         </TouchableOpacity>
-                        <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{deviceName || 'Cargando...'}</Text>
+                        <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{localDeviceName || 'Cargando...'}</Text>
                         <HeaderProfileMenu />
                     </View>
 
@@ -233,7 +317,7 @@ export default function DeviceDetailScreen() {
                         <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
                             <ArrowLeft color="#e5e2e1" size={24} />
                         </TouchableOpacity>
-                        <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{deviceName || 'Equipo'}</Text>
+                        <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{localDeviceName || 'Equipo'}</Text>
                         <HeaderProfileMenu />
                     </View>
 
@@ -264,11 +348,13 @@ export default function DeviceDetailScreen() {
                     <TouchableOpacity onPress={handleBack} className="p-2 -ml-2">
                         <ArrowLeft color="#e5e2e1" size={24} />
                     </TouchableOpacity>
-                    <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{device?.name || deviceName || 'Cargando...'}</Text>
+                    <Text className="text-text text-[20px] font-semibold flex-1 ml-2" numberOfLines={1}>
+                        {localDeviceName || 'Cargando...'}
+                    </Text>
 
-                    <View className="flex-row items-center">
-                        <TouchableOpacity onPress={confirmDelete} className="p-2 mr-2">
-                            <Trash2 color="#ffb4ab" size={20} />
+                    <View className="flex-row items-center gap-2">
+                        <TouchableOpacity ref={optionsBtnRef} onPress={openOptionsMenu} className="p-2 active:opacity-60">
+                            <MoreVertical color="#e5e2e1" size={20} />
                         </TouchableOpacity>
                         <HeaderProfileMenu />
                     </View>
@@ -329,6 +415,111 @@ export default function DeviceDetailScreen() {
                     )}
                 </ScrollView>
             </View>
+
+            {/* Modal Opciones */}
+            <Modal visible={optionsVisible} transparent animationType="fade" onRequestClose={() => setOptionsVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setOptionsVisible(false)}>
+                    <RNView style={{ flex: 1 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <RNView style={{
+                                position: 'absolute',
+                                top: menuPos.top,
+                                right: menuPos.right,
+                                backgroundColor: '#2a2a2a',
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: '#444444',
+                                minWidth: 200,
+                                shadowColor: '#000',
+                                shadowOpacity: 0.4,
+                                shadowRadius: 8,
+                                elevation: 8,
+                                overflow: 'hidden',
+                            }}>
+                                <TouchableOpacity onPress={() => { setOptionsVisible(false); setEditName(localDeviceName); setEditError(""); setEditVisible(true); }}>
+                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
+                                        <Pencil color="#e5e2e1" size={16} />
+                                        <Text className="text-text font-medium text-sm">Editar nombre</Text>
+                                    </RNView>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => { setOptionsVisible(false); confirmDelete(); }}>
+                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
+                                        <Trash2 color="#ff8a80" size={16} />
+                                        <Text className="text-[#ff8a80] font-medium text-sm">Eliminar equipo</Text>
+                                    </RNView>
+                                </TouchableOpacity>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            {/* Modal Editar */}
+            <Modal visible={editVisible} transparent animationType="fade" onRequestClose={() => setEditVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setEditVisible(false)}>
+                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                    <Text className="text-text font-bold text-lg">Editar equipo</Text>
+                                    <TouchableOpacity onPress={() => setEditVisible(false)} className="active:opacity-60">
+                                        <X color="#94918e" size={20} />
+                                    </TouchableOpacity>
+                                </RNView>
+                                <Text className="text-textMuted text-sm mb-2">Nombre del equipo</Text>
+                                <TextInput
+                                    value={editName}
+                                    onChangeText={(t) => { setEditName(t); setEditError(''); }}
+                                    placeholder="Ej: Computadora Principal..."
+                                    placeholderTextColor="#94918e"
+                                    autoFocus
+                                    style={{ backgroundColor: '#141313', borderWidth: 1, borderColor: '#444444', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, color: '#e5e2e1', fontSize: 15, marginBottom: 8 }}
+                                />
+                                {editError ? <Text className="text-[#ffb4ab] text-sm mb-3">{editError}</Text> : <RNView style={{ height: 12 }} />}
+                                <RNView style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                                    <TouchableOpacity onPress={() => setEditVisible(false)} className="flex-1 py-3 rounded-lg border border-border items-center active:opacity-70">
+                                        <Text className="text-textMuted font-medium">Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleEditDevice} disabled={editing} className={`flex-1 py-3 rounded-lg border border-primary items-center ${editing ? 'opacity-50' : 'active:opacity-80'}`}>
+                                        {editing ? <ActivityIndicator color="#6699cc" /> : <Text className="text-primary font-semibold">Guardar</Text>}
+                                    </TouchableOpacity>
+                                </RNView>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            {/* Modal Eliminar */}
+            <Modal visible={deleteVisible} transparent animationType="fade" onRequestClose={() => setDeleteVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setDeleteVisible(false)}>
+                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                    <Text className="text-[#ffb4ab] font-bold text-lg">Eliminar equipo</Text>
+                                    <TouchableOpacity onPress={() => setDeleteVisible(false)} className="active:opacity-60">
+                                        <X color="#94918e" size={20} />
+                                    </TouchableOpacity>
+                                </RNView>
+                                <Text className="text-text text-[15px] mb-4">
+                                    ¿Estás seguro que deseas eliminar el equipo <Text className="font-bold">{localDeviceName}</Text>?
+                                </Text>
+                                <Text className="text-textMuted text-sm mb-4">Esta acción eliminará todos sus componentes y registros asociados. No se puede deshacer.</Text>
+                                {deleteError ? <Text className="text-[#ffb4ab] text-sm mb-3">{deleteError}</Text> : null}
+                                <RNView style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                                    <TouchableOpacity onPress={() => setDeleteVisible(false)} className="flex-1 py-3 rounded-lg border border-border items-center active:opacity-70">
+                                        <Text className="text-textMuted font-medium">Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleDeleteDevice} disabled={deleting} className={`flex-1 py-3 rounded-lg bg-[#cc3333] border border-[#cc3333] items-center ${deleting ? 'opacity-50' : 'active:opacity-80'}`}>
+                                        {deleting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Eliminar</Text>}
+                                    </TouchableOpacity>
+                                </RNView>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
+            </Modal>
         </SafeAreaView>
     );
 }
