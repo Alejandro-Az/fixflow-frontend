@@ -4,21 +4,59 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test": "jest --watchAll=false",
+    "test:watch": "jest --watchAll",
     "postinstall": "patch-package"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.[jt]sx?$": [
+        "babel-jest",
+        {
+          "configFile": "./babel.config.test.js"
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(zustand)/)"
+    ],
+    "moduleNameMapper": {
+      "^expo-secure-store$": "<rootDir>/src/__mocks__/expo-secure-store.ts",
+      "^expo-file-system$": "<rootDir>/src/__mocks__/expo-file-system.ts",
+      "^expo-sharing$": "<rootDir>/src/__mocks__/expo-sharing.ts",
+      "react-native": "<rootDir>/src/__mocks__/react-native.ts",
+      "^.*/api/client$": "<rootDir>/src/__mocks__/apiClient.ts",
+      "^.*/api/storage$": "<rootDir>/src/__mocks__/storage.ts"
+    },
+    "testMatch": [
+      "<rootDir>/src/__tests__/**/*.test.ts"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/__mocks__/**",
+      "!src/__tests__/**"
+    ]
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
     "@react-native-community/datetimepicker": "8.2.0",
+    "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/elements": "^2.2.5",
     "@react-navigation/native": "^7.0.14",
+    "@stripe/stripe-react-native": "0.38.6",
     "axios": "^1.7.9",
     "expo": "~52.0.46",
+    "expo-auth-session": "~6.0.3",
     "expo-constants": "~17.0.8",
+    "expo-dev-client": "~5.0.20",
+    "expo-file-system": "~18.0.12",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image-picker": "~16.0.6",
@@ -26,10 +64,11 @@
     "expo-router": "~4.0.20",
     "expo-screen-capture": "~7.0.1",
     "expo-secure-store": "~14.0.1",
+    "expo-sharing": "~13.0.1",
     "expo-splash-screen": "~0.29.22",
     "expo-status-bar": "~2.0.1",
     "expo-system-ui": "~4.0.9",
-    "expo-web-browser": "~13.0.3",
+    "expo-web-browser": "~14.0.2",
     "lucide-react-native": "^0.475.0",
     "nativewind": "^4.1.23",
     "react": "18.3.1",
@@ -45,9 +84,17 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.3",
+    "@babel/preset-typescript": "^7.28.5",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~18.3.12",
+    "babel-jest": "^30.3.0",
     "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.1",
+    "jest": "^30.3.0",
+    "jest-expo": "^55.0.16",
     "patch-package": "^8.0.1",
     "typescript": "^5.3.3"
   },

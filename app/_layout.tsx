@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
@@ -12,6 +12,22 @@ import {
 import "../global.css";
 
 import { useAuthStore } from "../src/store/useAuthStore";
+
+const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
+function MaybeStripeProvider({ children }: { children: ReactNode }) {
+  if (Platform.OS === "web" || !STRIPE_PK) return <>{children}</>;
+  const { StripeProvider } = require("@stripe/stripe-react-native");
+  return (
+    <StripeProvider
+      publishableKey={STRIPE_PK}
+      merchantIdentifier="merchant.com.kaanforge.fixflow"
+      urlScheme="fixflow"
+    >
+      {children}
+    </StripeProvider>
+  );
+}
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -51,16 +67,18 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#141313" },
-        }}
-      >
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" />
-      </Stack>
-      <StatusBar style="light" />
+      <MaybeStripeProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: "#141313" },
+          }}
+        >
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(app)" />
+        </Stack>
+        <StatusBar style="light" />
+      </MaybeStripeProvider>
     </SafeAreaProvider>
   );
 }

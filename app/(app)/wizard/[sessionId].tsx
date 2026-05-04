@@ -6,6 +6,8 @@ import { ArrowLeft, CheckCircle, Circle, Save, LogOut, Lock, ChevronDown, Chevro
 import apiClient from '../../../src/api/client';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { CATEGORY_COLORS } from '../../../components/ui/CategoryRow';
+import { exportFile } from '../../../src/utils/fileExport';
+import { FileText, FileSpreadsheet } from 'lucide-react-native';
 
 export default function WizardScreen() {
     const { sessionId } = useLocalSearchParams();
@@ -18,6 +20,8 @@ export default function WizardScreen() {
     const [activeTab, setActiveTab] = useState<'global'|'components'|'summary'>('global');
     const [summaryText, setSummaryText] = useState('');
     const [expandedComponents, setExpandedComponents] = useState<Record<number, boolean>>({});
+    const [exportingPdf, setExportingPdf] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
 
     const isFreePlan = user?.plan === 'free';
 
@@ -123,6 +127,20 @@ export default function WizardScreen() {
         }
     };
 
+    const handleExport = async (type: 'excel' | 'pdf') => {
+        if (!session?.device_id) return;
+        
+        if (type === 'excel') {
+            setExportingExcel(true);
+            await exportFile(`/devices/${session.device_id}/exports/maintenance/excel`);
+            setExportingExcel(false);
+        } else {
+            setExportingPdf(true);
+            await exportFile(`/devices/${session.device_id}/exports/maintenance/pdf`);
+            setExportingPdf(false);
+        }
+    };
+
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-background justify-center items-center">
@@ -197,7 +215,7 @@ export default function WizardScreen() {
                                             {step.title}
                                         </Text>
                                     </TouchableOpacity>
-                                    {step.checked && (
+                                    {step.checked && !isFreePlan && (
                                         <TextInput
                                             className="mt-4 bg-[#141313] border border-border rounded-lg px-4 py-3 text-text"
                                             placeholder="Añadir notas (opcional)..."
@@ -252,20 +270,35 @@ export default function WizardScreen() {
                                         {isExpanded && (
                                             <View className="mt-4 border-t border-border pt-2">
                                                 {compStep.steps?.map((step: any, stepIndex: number) => (
-                                                    <TouchableOpacity 
-                                                        key={step.key}
-                                                        className="flex-row items-center py-3 border-b border-border"
-                                                        onPress={() => toggleComponentStep(compIndex, stepIndex)}
-                                                    >
-                                                        {step.checked ? (
-                                                            <CheckCircle color={color} size={22} />
-                                                        ) : (
-                                                            <Circle color="#8b919a" size={22} />
+                                                    <View key={step.key} className="border-b border-border">
+                                                        <TouchableOpacity 
+                                                            className="flex-row items-center py-3"
+                                                            onPress={() => toggleComponentStep(compIndex, stepIndex)}
+                                                        >
+                                                            {step.checked ? (
+                                                                <CheckCircle color={color} size={22} />
+                                                            ) : (
+                                                                <Circle color="#8b919a" size={22} />
+                                                            )}
+                                                            <Text className={`ml-3 text-[15px] font-medium flex-1 ${step.checked ? 'text-textMuted' : 'text-text'}`}>
+                                                                {step.title}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                        {step.checked && !isFreePlan && (
+                                                            <TextInput
+                                                                className="mb-4 bg-[#141313] border border-border rounded-lg px-4 py-3 text-text"
+                                                                placeholder="Añadir notas del paso (opcional)..."
+                                                                placeholderTextColor="#94918e"
+                                                                value={step.notes || ''}
+                                                                onChangeText={(t) => {
+                                                                    const newComponentSteps = [...session.payload.component_steps];
+                                                                    newComponentSteps[compIndex].steps[stepIndex].notes = t;
+                                                                    setSession({ ...session, payload: { ...session.payload, component_steps: newComponentSteps } });
+                                                                }}
+                                                                onBlur={() => handleAutoSave({ ...session.payload, component_steps: session.payload.component_steps })}
+                                                            />
                                                         )}
-                                                        <Text className={`ml-3 text-[15px] font-medium flex-1 ${step.checked ? 'text-textMuted' : 'text-text'}`}>
-                                                            {step.title}
-                                                        </Text>
-                                                    </TouchableOpacity>
+                                                    </View>
                                                 ))}
 
                                                 <View className="mt-4 pt-4">
@@ -281,7 +314,7 @@ export default function WizardScreen() {
                                                             className="bg-[#141313] border border-border rounded-lg px-4 py-4 items-center"
                                                             onPress={() => Alert.alert('Premium', 'Actualiza a Pro para guardar observaciones técnicas detalladas de cada componente.')}
                                                         >
-                                                            <Text className="text-[#94918e] font-medium">Solo disponible en plan Pro</Text>
+                                                            <Text className="text-[#94918e] font-medium text-center">Mejora tu plan para agregar observaciones y notas técnicas a tus componentes.</Text>
                                                         </TouchableOpacity>
                                                     ) : (
                                                         <TextInput
@@ -330,7 +363,7 @@ export default function WizardScreen() {
                             <TouchableOpacity 
                                 onPress={handleComplete}
                                 disabled={saving}
-                                className="w-full py-4 rounded-xl items-center bg-primary flex-row justify-center mb-4"
+                                className="w-full py-4 rounded-xl items-center bg-primary flex-row justify-center mb-6"
                             >
                                 {saving ? <ActivityIndicator size="small" color="#141313" /> : (
                                     <>
@@ -339,6 +372,41 @@ export default function WizardScreen() {
                                     </>
                                 )}
                             </TouchableOpacity>
+
+                            {/* Export Section */}
+                            <View className="bg-surface border border-border rounded-xl p-4 mt-2">
+                                <Text className="text-text font-bold text-[16px] mb-2">Exportar Historial Previo</Text>
+                                <Text className="text-textMuted text-[13px] mb-4">
+                                    Nota: El reporte incluirá los mantenimientos pasados del equipo. El mantenimiento actual se incluirá en reportes futuros una vez finalizado.
+                                </Text>
+                                <View className="flex-row gap-3">
+                                    <TouchableOpacity 
+                                        onPress={() => handleExport('excel')}
+                                        disabled={exportingExcel}
+                                        className="bg-[#141313] border border-border rounded-lg py-3 px-4 flex-row items-center flex-1 justify-center"
+                                    >
+                                        {exportingExcel ? <ActivityIndicator size="small" color="#94918e" /> : (
+                                            <>
+                                                {user?.plan !== 'premium' && user?.plan !== 'enterprise' ? <Lock color="#94918e" size={16} className="mr-2" /> : <FileSpreadsheet color="#39ff14" size={16} className="mr-2" />}
+                                                <Text className="text-textMuted font-medium text-[13px]">Excel</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                    
+                                    <TouchableOpacity 
+                                        onPress={() => handleExport('pdf')}
+                                        disabled={exportingPdf}
+                                        className="bg-[#141313] border border-border rounded-lg py-3 px-4 flex-row items-center flex-1 justify-center"
+                                    >
+                                        {exportingPdf ? <ActivityIndicator size="small" color="#94918e" /> : (
+                                            <>
+                                                {user?.plan !== 'premium' && user?.plan !== 'enterprise' ? <Lock color="#94918e" size={16} className="mr-2" /> : <FileText color="#ff8a80" size={16} className="mr-2" />}
+                                                <Text className="text-textMuted font-medium text-[13px]">PDF</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </View>
                     )}
 

@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { Modal, TouchableWithoutFeedback, View as RNView, Dimensions } from 'react-native';
 import { View, Text, TouchableOpacity } from './ui';
-import { CircleUser, LogOut, User } from 'lucide-react-native';
+import { CircleUser, LogOut, User, CreditCard } from 'lucide-react-native';
 import { useAuthStore } from '../store/useAuthStore';
+import { useRouter } from 'expo-router';
 
 export function HeaderProfileMenu() {
     const { user, logout } = useAuthStore();
+    const router = useRouter();
     const [menuVisible, setMenuVisible] = useState(false);
     const [menuPos, setMenuPos] = useState({ top: 64, right: 20 });
     const profileBtnRef = useRef<any>(null);
@@ -76,6 +78,20 @@ export function HeaderProfileMenu() {
                                     <Text className="text-[#9acbff] text-xs font-medium capitalize">Plan {user?.plan ?? 'free'}</Text>
                                 </RNView>
                             </RNView>
+
+                            <TouchableOpacity onPress={() => { setMenuVisible(false); router.push('/profile' as any); }}>
+                                <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
+                                    <User color="#e5e2e1" size={16} />
+                                    <Text className="text-text font-medium text-sm">Mi Perfil</Text>
+                                </RNView>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={() => { setMenuVisible(false); router.push('/plans' as any); }}>
+                                <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
+                                    <CreditCard color="#6699cc" size={16} />
+                                    <Text className="text-text font-medium text-sm">Ver planes</Text>
+                                </RNView>
+                            </TouchableOpacity>
 
                             <TouchableOpacity onPress={handleLogout}>
                                 <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>

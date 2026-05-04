@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Platform, Alert, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Platform, Alert, Modal, TouchableWithoutFeedback, View as RNView, Dimensions } from 'react-native';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, KeyboardAvoidingView } from '../../../../src/components/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Link as LinkIcon, ArrowRight, ChevronDown, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Link as LinkIcon, ArrowRight, ChevronDown, ChevronRight, MoreVertical, Trash2, X } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PhotoUploader } from '../../../../components/ui/PhotoUploader';
 import apiClient from '../../../../src/api/client';
@@ -115,6 +115,47 @@ export default function ComponentFormScreen() {
     const [purchaseStatus, setPurchaseStatus] = useState('');
     const [storeUrl, setStoreUrl] = useState('');
     const [imageUri, setImageUri] = useState<string | null>(null);
+    const [existingPhotoId, setExistingPhotoId] = useState<string | null>(null);
+
+    // Menu options
+    const [optionsVisible, setOptionsVisible] = useState(false);
+    const [menuPos, setMenuPos] = useState({ top: 64, right: 20 });
+    const optionsBtnRef = useRef<any>(null);
+
+    // Delete Component
+    const [deleteVisible, setDeleteVisible] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+
+    const openOptionsMenu = () => {
+        optionsBtnRef.current?.measure(
+            (_fx: number, _fy: number, w: number, h: number, px: number, py: number) => {
+                const screenWidth = Dimensions.get("window").width;
+                const rightOffset = screenWidth - px - w;
+                setMenuPos({ top: py + h + 6, right: rightOffset });
+                setOptionsVisible(true);
+            }
+        );
+    };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        setDeleteError("");
+        try {
+            const res = await apiClient.delete(`/devices/${id}/components/${componentId}`);
+            if (res.data.ok) {
+                setDeleteVisible(false);
+                handleBack();
+            } else {
+                setDeleteError("No se pudo eliminar el componente.");
+            }
+        } catch (err: any) {
+            console.error('Error deleting component', err);
+            setDeleteError(err.response?.data?.error?.message || "Error al eliminar.");
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     useEffect(() => {
         const fetchComponent = async () => {
@@ -132,6 +173,7 @@ export default function ComponentFormScreen() {
                         if (comp.specs) setSpecs(comp.specs);
                         if (comp.photos && comp.photos.length > 0) {
                             setImageUri(comp.photos[0].url);
+                            setExistingPhotoId(comp.photos[0].id);
                         }
                     }
                 }
@@ -171,24 +213,60 @@ export default function ComponentFormScreen() {
                 savedComponentId = res.data.data.id;
             }
 
-            if (imageUri && !imageUri.startsWith('http') && !isFreePlan) {
+            const isNewImage = imageUri && (
+                imageUri.startsWith('file:') || 
+                imageUri.startsWith('data:') || 
+                imageUri.startsWith('blob:') || 
+                (!imageUri.startsWith('http') && !imageUri.startsWith('https'))
+            );
+
+            // Eliminar foto si el usuario la quitó y existía
+            if (!imageUri && existingPhotoId && !isFreePlan) {
+                try {
+                    await apiClient.delete(`/components/${savedComponentId}/photos/${existingPhotoId}`);
+                } catch (err) {
+                    console.error('Error eliminando foto', err);
+                }
+            }
+
+            // Subir nueva foto (o reemplazar existente)
+            if (isNewImage && !isFreePlan) {
                 const formData = new FormData();
                 const filename = imageUri.split('/').pop() || 'photo.jpg';
-                const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image`;
 
-                formData.append('photo', {
-                    uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
-                    name: filename,
-                    type,
-                } as any);
+                if (Platform.OS === 'web') {
+                    const response = await fetch(imageUri);
+                    const blob = await response.blob();
+                    formData.append('photo', blob, filename);
+                } else {
+                    const match = /\.(\w+)$/.exec(filename);
+                    const type = match ? `image/${match[1]}` : `image`;
+
+                    formData.append('photo', {
+                        uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
+                        name: filename,
+                        type,
+                    } as any);
+                }
 
                 try {
-                    await apiClient.post(`/components/${savedComponentId}/photos`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                    });
+                    if (existingPhotoId) {
+                        // Reemplazar foto existente usando POST + _method=PUT para asegurar compatibilidad multipart
+                        formData.append('_method', 'PUT');
+                        await apiClient.post(`/components/${savedComponentId}/photos/${existingPhotoId}`, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                        });
+                    } else {
+                        // Crear nueva
+                        await apiClient.post(`/components/${savedComponentId}/photos`, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                        });
+                    }
                 } catch (photoErr: any) {
                     console.log('Error subiendo foto', photoErr);
+                    if (photoErr.response?.data?.error?.code === 'PLAN_LIMIT_REACHED' || photoErr.response?.status === 403) {
+                        Alert.alert('Límite alcanzado', 'Has alcanzado el límite de fotos para tu plan. Tu componente fue guardado sin la foto.');
+                    }
                 }
             }
 
@@ -198,7 +276,12 @@ export default function ComponentFormScreen() {
             let errorMsg = 'Ocurrió un error inesperado al guardar el componente.';
 
             if (err.response?.data?.error) {
-                errorMsg = err.response.data.error.message;
+                const errorCode = err.response.data.error.code;
+                if (err.response.status === 403 || errorCode === 'PLAN_LIMIT_REACHED' || errorCode === 'AUTH_FORBIDDEN') {
+                    errorMsg = 'Has alcanzado el límite de componentes permitidos para tu plan en esta categoría. Haz upgrade para continuar.';
+                } else {
+                    errorMsg = err.response.data.error.message;
+                }
 
                 if (err.response.data.error.details) {
                     const details = err.response.data.error.details;
@@ -239,24 +322,91 @@ export default function ComponentFormScreen() {
                         <ArrowLeft color="#e5e2e1" size={24} />
                     </TouchableOpacity>
                     <Text className="text-text text-[20px] font-semibold flex-1 ml-2">{title}</Text>
-                    <HeaderProfileMenu />
+                    
+                    <View className="flex-row items-center gap-2">
+                        {componentId && (
+                            <TouchableOpacity ref={optionsBtnRef} onPress={openOptionsMenu} className="p-2 active:opacity-60">
+                                <MoreVertical color="#e5e2e1" size={20} />
+                            </TouchableOpacity>
+                        )}
+                        <HeaderProfileMenu />
+                    </View>
                 </View>
 
                 <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 40 }}>
                     {isFreePlan ? (
-                        <View className="bg-surface border border-dashed border-border rounded-xl p-5 mb-6 items-center">
-                            <Text className="text-textMuted text-sm mb-2 text-center">Sube fotos de tus componentes con el Plan Pro</Text>
-                            <TouchableOpacity className="flex-row items-center active:opacity-80">
-                                <Text className="text-primary font-medium text-sm mr-1">Upgrade a Pro</Text>
-                                <ArrowRight color="#6699cc" size={16} />
-                            </TouchableOpacity>
-                        </View>
+                        imageUri ? (
+                            // Tiene fotos de un plan anterior — solo lectura, no puede cambiarla
+                            <View className="mb-6">
+                                <View className="rounded-xl overflow-hidden border border-border">
+                                    <View style={{ height: 180 }}>
+                                        <View className="absolute inset-0 bg-surface" />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-require-imports */}
+                                        <RNView style={{ flex: 1 }}>
+                                            <RNView
+                                                style={{
+                                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                                    overflow: 'hidden',
+                                                }}
+                                            >
+                                                {/* Usamos Image directamente para URLs remotas */}
+                                                {/* @ts-ignore */}
+                                                <RNView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1c1b1b' }}>
+                                                    {/* Mostrar la foto via componente Image nativo */}
+                                                    <RNView style={{ width: '100%', height: 180 }}>
+                                                        {/* Image nativa de React Native */}
+                                                        {React.createElement(
+                                                            require('react-native').Image,
+                                                            {
+                                                                source: { uri: imageUri },
+                                                                style: { width: '100%', height: 180, resizeMode: 'cover' },
+                                                            }
+                                                        )}
+                                                    </RNView>
+                                                    {/* Overlay semitransparente con candado */}
+                                                    <RNView
+                                                        style={{
+                                                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                                            backgroundColor: 'rgba(20,19,19,0.55)',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                    >
+                                                        <Text style={{ fontSize: 28 }}>🔒</Text>
+                                                    </RNView>
+                                                </RNView>
+                                            </RNView>
+                                        </RNView>
+                                    </View>
+                                </View>
+                                <View className="bg-surface border border-dashed border-border rounded-b-xl px-4 py-3 items-center -mt-1">
+                                    <Text className="text-textMuted text-[12px] text-center mb-2">
+                                        Plan Free: Esta foto es de solo lectura. Haz upgrade para agregar o cambiar fotos.
+                                    </Text>
+                                    <TouchableOpacity onPress={() => router.push('/plans' as any)} className="flex-row items-center active:opacity-80">
+                                        <Text className="text-primary font-medium text-sm mr-1">Mejorar a Pro</Text>
+                                        <ArrowRight color="#6699cc" size={16} />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            // Free sin fotos previas — CTA de upgrade
+                            <View className="bg-surface border border-dashed border-border rounded-xl p-5 mb-6 items-center">
+                                <Text className="text-textMuted text-sm mb-2 text-center">Sube fotos de tus componentes con el Plan Pro</Text>
+                                <TouchableOpacity onPress={() => router.push('/plans' as any)} className="flex-row items-center active:opacity-80">
+                                    <Text className="text-primary font-medium text-sm mr-1">Mejorar a Pro</Text>
+                                    <ArrowRight color="#6699cc" size={16} />
+                                </TouchableOpacity>
+                            </View>
+                        )
                     ) : (
-                        <PhotoUploader
-                            imageUri={imageUri}
-                            onImageSelect={setImageUri}
-                            onImageRemove={() => setImageUri(null)}
-                        />
+                        <View>
+                            <PhotoUploader
+                                imageUri={imageUri}
+                                onImageSelect={setImageUri}
+                                onImageRemove={() => setImageUri(null)}
+                            />
+                        </View>
                     )}
 
                     <View className="bg-surface border border-border rounded-xl p-5 mb-6">
@@ -462,6 +612,69 @@ export default function ComponentFormScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Modal Opciones */}
+            <Modal visible={optionsVisible} transparent animationType="fade" onRequestClose={() => setOptionsVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setOptionsVisible(false)}>
+                    <RNView style={{ flex: 1 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <RNView style={{
+                                position: 'absolute',
+                                top: menuPos.top,
+                                right: menuPos.right,
+                                backgroundColor: '#2a2a2a',
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: '#444444',
+                                minWidth: 200,
+                                shadowColor: '#000',
+                                shadowOpacity: 0.4,
+                                shadowRadius: 8,
+                                elevation: 8,
+                                overflow: 'hidden',
+                            }}>
+                                <TouchableOpacity onPress={() => { setOptionsVisible(false); setDeleteError(""); setDeleteVisible(true); }}>
+                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
+                                        <Trash2 color="#ff8a80" size={16} />
+                                        <Text className="text-[#ff8a80] font-medium text-sm">Eliminar componente</Text>
+                                    </RNView>
+                                </TouchableOpacity>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            {/* Modal Eliminar */}
+            <Modal visible={deleteVisible} transparent animationType="fade" onRequestClose={() => setDeleteVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setDeleteVisible(false)}>
+                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                    <Text className="text-[#ffb4ab] font-bold text-lg">Eliminar componente</Text>
+                                    <TouchableOpacity onPress={() => setDeleteVisible(false)} className="active:opacity-60">
+                                        <X color="#94918e" size={20} />
+                                    </TouchableOpacity>
+                                </RNView>
+                                <Text className="text-text text-[15px] mb-4">
+                                    ¿Estás seguro que deseas eliminar el componente <Text className="font-bold">{name || 'seleccionado'}</Text>?
+                                </Text>
+                                <Text className="text-textMuted text-sm mb-4">Esta acción no se puede deshacer.</Text>
+                                {deleteError ? <Text className="text-[#ffb4ab] text-sm mb-3">{deleteError}</Text> : null}
+                                <RNView style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                                    <TouchableOpacity onPress={() => setDeleteVisible(false)} className="flex-1 py-3 rounded-lg border border-border items-center active:opacity-70">
+                                        <Text className="text-textMuted font-medium">Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleDelete} disabled={deleting} className={`flex-1 py-3 rounded-lg bg-[#cc3333] border border-[#cc3333] items-center ${deleting ? 'opacity-50' : 'active:opacity-80'}`}>
+                                        {deleting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Eliminar</Text>}
+                                    </TouchableOpacity>
+                                </RNView>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>
     );
