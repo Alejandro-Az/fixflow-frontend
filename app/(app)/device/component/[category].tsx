@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Platform, Alert, Modal, TouchableWithoutFeedback, View as RNView, Dimensions } from 'react-native';
+import { Platform, Alert, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, KeyboardAvoidingView } from '../../../../src/components/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Link as LinkIcon, ArrowRight, ChevronDown, ChevronRight, MoreVertical, Trash2, X } from 'lucide-react-native';
@@ -342,8 +342,8 @@ export default function ComponentFormScreen() {
                                     <View style={{ height: 180 }}>
                                         <View className="absolute inset-0 bg-surface" />
                                         {/* eslint-disable-next-line @typescript-eslint/no-require-imports */}
-                                        <RNView style={{ flex: 1 }}>
-                                            <RNView
+                                        <View style={{ flex: 1 }}>
+                                            <View
                                                 style={{
                                                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                                                     overflow: 'hidden',
@@ -351,9 +351,9 @@ export default function ComponentFormScreen() {
                                             >
                                                 {/* Usamos Image directamente para URLs remotas */}
                                                 {/* @ts-ignore */}
-                                                <RNView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1c1b1b' }}>
+                                                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1c1b1b' }}>
                                                     {/* Mostrar la foto via componente Image nativo */}
-                                                    <RNView style={{ width: '100%', height: 180 }}>
+                                                    <View style={{ width: '100%', height: 180 }}>
                                                         {/* Image nativa de React Native */}
                                                         {React.createElement(
                                                             require('react-native').Image,
@@ -362,9 +362,9 @@ export default function ComponentFormScreen() {
                                                                 style: { width: '100%', height: 180, resizeMode: 'cover' },
                                                             }
                                                         )}
-                                                    </RNView>
+                                                    </View>
                                                     {/* Overlay semitransparente con candado */}
-                                                    <RNView
+                                                    <View
                                                         style={{
                                                             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                                                             backgroundColor: 'rgba(20,19,19,0.55)',
@@ -373,10 +373,10 @@ export default function ComponentFormScreen() {
                                                         }}
                                                     >
                                                         <Text style={{ fontSize: 28 }}>🔒</Text>
-                                                    </RNView>
-                                                </RNView>
-                                            </RNView>
-                                        </RNView>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
                                 <View className="bg-surface border border-dashed border-border rounded-b-xl px-4 py-3 items-center -mt-1">
@@ -617,9 +617,9 @@ export default function ComponentFormScreen() {
             {/* Modal Opciones */}
             <Modal visible={optionsVisible} transparent animationType="fade" onRequestClose={() => setOptionsVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setOptionsVisible(false)}>
-                    <RNView style={{ flex: 1 }}>
+                    <View style={{ flex: 1 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{
+                            <View style={{
                                 position: 'absolute',
                                 top: menuPos.top,
                                 right: menuPos.right,
@@ -635,45 +635,45 @@ export default function ComponentFormScreen() {
                                 overflow: 'hidden',
                             }}>
                                 <TouchableOpacity onPress={() => { setOptionsVisible(false); setDeleteError(""); setDeleteVisible(true); }}>
-                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
                                         <Trash2 color="#ff8a80" size={16} />
                                         <Text className="text-[#ff8a80] font-medium text-sm">Eliminar componente</Text>
-                                    </RNView>
+                                    </View>
                                 </TouchableOpacity>
-                            </RNView>
+                            </View>
                         </TouchableWithoutFeedback>
-                    </RNView>
+                    </View>
                 </TouchableWithoutFeedback>
             </Modal>
 
             {/* Modal Eliminar */}
             <Modal visible={deleteVisible} transparent animationType="fade" onRequestClose={() => setDeleteVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setDeleteVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
-                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <View style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-[#ffb4ab] font-bold text-lg">Eliminar componente</Text>
                                     <TouchableOpacity onPress={() => setDeleteVisible(false)} className="active:opacity-60">
                                         <X color="#94918e" size={20} />
                                     </TouchableOpacity>
-                                </RNView>
+                                </View>
                                 <Text className="text-text text-[15px] mb-4">
                                     ¿Estás seguro que deseas eliminar el componente <Text className="font-bold">{name || 'seleccionado'}</Text>?
                                 </Text>
                                 <Text className="text-textMuted text-sm mb-4">Esta acción no se puede deshacer.</Text>
                                 {deleteError ? <Text className="text-[#ffb4ab] text-sm mb-3">{deleteError}</Text> : null}
-                                <RNView style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
                                     <TouchableOpacity onPress={() => setDeleteVisible(false)} className="flex-1 py-3 rounded-lg border border-border items-center active:opacity-70">
                                         <Text className="text-textMuted font-medium">Cancelar</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={handleDelete} disabled={deleting} className={`flex-1 py-3 rounded-lg bg-[#cc3333] border border-[#cc3333] items-center ${deleting ? 'opacity-50' : 'active:opacity-80'}`}>
                                         {deleting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Eliminar</Text>}
                                     </TouchableOpacity>
-                                </RNView>
-                            </RNView>
+                                </View>
+                            </View>
                         </TouchableWithoutFeedback>
-                    </RNView>
+                    </View>
                 </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>

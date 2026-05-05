@@ -36,12 +36,13 @@ const PLANS = [
         highlight: false,
         purchasable: false,
         features: [
-            { label: 'Workspaces (espacios)', value: '1' },
+            { label: 'Workspaces', value: '1' },
             { label: 'Equipos por workspace', value: '2' },
-            { label: 'Fotos adjuntas en los componentes', available: false },
-            { label: 'Notas técnicas en el asistente de mantenimiento', available: false },
-            { label: 'Exportar inventario de componentes (Excel)', available: false },
-            { label: 'Exportar reportes de mantenimiento (PDF/Excel)', available: false },
+            { label: 'Componentes por equipo', value: '1 por categoría' },
+            { label: 'Fotos por componente', available: false },
+            { label: 'Wizard de mantenimiento', value: 'Básico (sin notas)' },
+            { label: 'Exportar inventario (Excel)', available: false },
+            { label: 'Exportar mantenimiento (PDF/Excel)', available: false },
         ],
     },
     {
@@ -54,12 +55,13 @@ const PLANS = [
         highlight: false,
         purchasable: true,
         features: [
-            { label: 'Workspaces (espacios)', value: '2' },
+            { label: 'Workspaces', value: '2' },
             { label: 'Equipos por workspace', value: '8' },
-            { label: 'Fotos adjuntas en los componentes', available: true },
-            { label: 'Notas técnicas en el asistente de mantenimiento', available: true },
-            { label: 'Exportar inventario de componentes (Excel)', available: true },
-            { label: 'Exportar reportes de mantenimiento (PDF/Excel)', available: false },
+            { label: 'Componentes por equipo', value: 'Ilimitados' },
+            { label: 'Fotos por componente', value: 'Ilimitadas' },
+            { label: 'Wizard de mantenimiento', value: 'Completo (con notas)' },
+            { label: 'Exportar inventario (Excel)', available: true },
+            { label: 'Exportar mantenimiento (PDF/Excel)', available: false },
         ],
     },
     {
@@ -72,13 +74,13 @@ const PLANS = [
         highlight: true,
         purchasable: true,
         features: [
-            { label: 'Workspaces (espacios)', value: 'Ilimitados' },
-            { label: 'Equipos por workspace', value: 'Ilimitados' },
-            { label: 'Fotos adjuntas en los componentes', available: true },
-            { label: 'Notas técnicas en el asistente de mantenimiento', available: true },
-            { label: 'Exportar inventario de componentes (Excel)', available: true },
-            { label: 'Exportar reportes de mantenimiento (PDF/Excel)', available: true },
-            { label: 'Soporte técnico', value: 'Prioritario' },
+            { label: 'Workspaces', value: '3' },
+            { label: 'Equipos por workspace', value: '10' },
+            { label: 'Componentes por equipo', value: 'Ilimitados' },
+            { label: 'Fotos por componente', value: 'Ilimitadas' },
+            { label: 'Wizard de mantenimiento', value: 'Completo (con notas)' },
+            { label: 'Exportar inventario (Excel)', available: true },
+            { label: 'Exportar mantenimiento (PDF/Excel)', available: true },
         ],
     },
     {
@@ -91,16 +93,17 @@ const PLANS = [
         highlight: false,
         purchasable: true,
         features: [
-            { label: 'Workspaces (espacios)', value: 'Ilimitados' },
+            { label: 'Workspaces', value: 'Ilimitados' },
             { label: 'Equipos por workspace', value: 'Ilimitados' },
-            { label: 'Fotos adjuntas en los componentes', value: 'Máx 1' },
-            { label: 'Notas técnicas en el asistente de mantenimiento', available: true },
-            { label: 'Exportar inventario de componentes (Excel)', available: true },
-            { label: 'Exportar reportes de mantenimiento (PDF/Excel)', available: true },
-            { label: 'Soporte técnico', value: 'Dedicado' },
+            { label: 'Componentes por equipo', value: 'Ilimitados' },
+            { label: 'Fotos por componente', value: 'Máx 1' },
+            { label: 'Wizard de mantenimiento', value: 'Completo (con notas)' },
+            { label: 'Exportar inventario (Excel)', available: true },
+            { label: 'Exportar mantenimiento (PDF/Excel)', available: true },
         ],
     },
 ];
+
 
 export default function PlansScreen() {
     const router = useRouter();

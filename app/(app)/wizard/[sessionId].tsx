@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, TextInput } from '../../../src/components/ui';
+import { Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView } from '../../../src/components/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle, Circle, Save, LogOut, Lock, ChevronDown, ChevronUp } from 'lucide-react-native';
 import apiClient from '../../../src/api/client';
@@ -211,9 +211,14 @@ export default function WizardScreen() {
                                         ) : (
                                             <Circle color="#8b919a" size={24} />
                                         )}
-                                        <Text className={`ml-3 text-[16px] font-medium ${step.checked ? 'text-textMuted line-through' : 'text-text'}`}>
-                                            {step.title}
-                                        </Text>
+                                        <View className="flex-1 ml-3">
+                                            <Text className={`text-[16px] font-medium ${step.checked ? 'text-textMuted line-through' : 'text-text'}`}>
+                                                {step.title}
+                                            </Text>
+                                            {step.help ? (
+                                                <Text className="text-textMuted text-[12px] mt-0.5">{step.help}</Text>
+                                            ) : null}
+                                        </View>
                                     </TouchableOpacity>
                                     {step.checked && !isFreePlan && (
                                         <TextInput
@@ -245,11 +250,7 @@ export default function WizardScreen() {
                                 
                                 const isComponentComplete = () => {
                                     if (!compStep.steps || compStep.steps.length === 0) return true;
-                                    return compStep.steps.every((step: any) => {
-                                        if (step.title.toLowerCase().includes('opcional')) return true;
-                                        if (compStep.category === 'gpu' && (step.key === 'gpu-paste' || step.title.toLowerCase().includes('pasta'))) return true;
-                                        return step.checked;
-                                    });
+                                    return compStep.steps.every((step: any) => step.checked);
                                 };
                                 const completed = isComponentComplete();
 
@@ -280,9 +281,14 @@ export default function WizardScreen() {
                                                             ) : (
                                                                 <Circle color="#8b919a" size={22} />
                                                             )}
-                                                            <Text className={`ml-3 text-[15px] font-medium flex-1 ${step.checked ? 'text-textMuted' : 'text-text'}`}>
-                                                                {step.title}
-                                                            </Text>
+                                                            <View className="flex-1 ml-3">
+                                                                <Text className={`text-[15px] font-medium ${step.checked ? 'text-textMuted' : 'text-text'}`}>
+                                                                    {step.title}
+                                                                </Text>
+                                                                {step.help ? (
+                                                                    <Text className="text-textMuted text-[12px] mt-0.5">{step.help}</Text>
+                                                                ) : null}
+                                                            </View>
                                                         </TouchableOpacity>
                                                         {step.checked && !isFreePlan && (
                                                             <TextInput

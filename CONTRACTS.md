@@ -7,11 +7,11 @@
 
 ## 1) Principio rector
 
-| Nivel                                  | Qué aplica                                                       |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| **Contrato fuerte** (no romper)        | HTTP status + `error.code` + shape mínimo                        |
+| Nivel | Qué aplica |
+|---|---|
+| **Contrato fuerte** (no romper) | HTTP status + `error.code` + shape mínimo |
 | **Contrato débil** (puede evolucionar) | `error.message` (copy/i18n), contenido exacto de `error.details` |
-| **No congelar** (expansión libre)      | Campos adicionales, orden de llaves JSON, textos                 |
+| **No congelar** (expansión libre) | Campos adicionales, orden de llaves JSON, textos |
 
 > **Ley:** cambiar `error.code` o el status HTTP de un error existente es un **breaking change**, aunque el JSON "se vea igual".
 
@@ -20,13 +20,11 @@
 ## 2) Envelope global
 
 ### Success
-
 ```json
-{ "ok": true, "data": {} }
+{ "ok": true, "data": { } }
 ```
 
 ### Error
-
 ```json
 {
   "ok": false,
@@ -52,16 +50,16 @@
 
 El Core evita `204` para no romper el envelope universal. En su lugar se usa `200` con `data`.
 
-| Status | Semántica                                                                        |
-| ------ | -------------------------------------------------------------------------------- |
-| `200`  | OK                                                                               |
-| `201`  | Recurso creado                                                                   |
-| `401`  | No autenticado / identidad no confiable (token/sesión/credenciales)              |
+| Status | Semántica |
+| ------ | --------- |
+| `200`  | OK |
+| `201`  | Recurso creado |
+| `401`  | No autenticado / identidad no confiable (token/sesión/credenciales) |
 | `403`  | Autenticado pero bloqueado por regla (RBAC/estado/verificación/feature behavior) |
-| `404`  | Ruta o recurso no existe                                                         |
-| `422`  | Error de validación                                                              |
-| `429`  | Rate limit / bloqueo por abuso                                                   |
-| `500`  | Error interno no controlado                                                      |
+| `404`  | Ruta o recurso no existe |
+| `422`  | Error de validación |
+| `429`  | Rate limit / bloqueo por abuso |
+| `500`  | Error interno no controlado |
 
 > **Ley:** cambiar 403→401 o 404→403 es breaking change aunque el JSON sea igual.
 
@@ -88,7 +86,6 @@ El Core evita `204` para no romper el envelope universal. En su lugar se usa `20
 - `AUTH_JWT_ERROR` (401) — error JWT general (no clasificado)
 
 ### API Keys
-
 - `AUTH_API_KEY_MISSING` (401) — falta API key en la solicitud
 - `AUTH_API_KEY_INVALID` (401) — API key desconocida/incorrecta (**por defecto** también cubre revoked/expired)
 - `AUTH_API_KEY_REVOKED` (401) — API key revocada/blacklist (**solo si** `KAAN_API_KEYS_EXCHANGE_VERBOSE_ERRORS=true`)
@@ -137,7 +134,6 @@ El Core evita `204` para no romper el envelope universal. En su lugar se usa `20
 - **403** = identidad válida, pero regla bloquea (RBAC/estado/verificación/feature behavior).
 
 Ejemplos congelados:
-
 - Token revocado / sesión inválida → 401
 - Usuario inactivo → 403
 - Email no verificado → 403
@@ -175,7 +171,6 @@ Ejemplo: `kaan.auth.allow_public_registration=false` → `403 REGISTRATION_DISAB
 ```
 
 **Invariantes mínimas congeladas:**
-
 - `data.data` existe y es array.
 - `data.links` existe y es objeto.
 - `data.meta` existe y es objeto.
@@ -199,14 +194,14 @@ Ejemplo: `kaan.auth.allow_public_registration=false` → `403 REGISTRATION_DISAB
 
 ### 8.1) Matriz Canónica de Recursos e Identificadores
 
-| Resource         | Addressable               | ID Type                   | Notes                             |
-| ---------------- | ------------------------- | ------------------------- | --------------------------------- |
-| `users`          | Sí                        | `public_id` (string ULID) | Route key pública                 |
-| `roles`          | Sí                        | `public_id` (string ULID) | Sin fallback numérico             |
-| `auth_sessions`  | Sí                        | `public_id` (string ULID) | Sin fallback numérico             |
-| `permissions`    | Catálogo (No addressable) | N/A                       | **Congelado**: Consumo por `name` |
-| `audit_logs`     | No                        | Informativo/interno       | Read-only                         |
-| `login_attempts` | No                        | Informativo/interno       | Read-only                         |
+| Resource | Addressable | ID Type | Notes |
+| --- | --- | --- | --- |
+| `users` | Sí | `public_id` (string ULID) | Route key pública |
+| `roles` | Sí | `public_id` (string ULID) | Sin fallback numérico |
+| `auth_sessions` | Sí | `public_id` (string ULID) | Sin fallback numérico |
+| `permissions` | Catálogo (No addressable) | N/A | **Congelado**: Consumo por `name` |
+| `audit_logs` | No | Informativo/interno | Read-only |
+| `login_attempts` | No | Informativo/interno | Read-only |
 
 ---
 
@@ -215,7 +210,6 @@ Ejemplo: `kaan.auth.allow_public_registration=false` → `403 REGISTRATION_DISAB
 A diferencia de Usuarios o Roles, los **Permissions** no se consideran "recursos de negocio" direccionables, sino un **catálogo técnico** de capacidades del sistema.
 
 **Decisión de Diseño**:
-
 - **Consumo por Name**: El contrato fuerte es el `name` del permiso. El frontend y los middlewares deben depender exclusivamente de este string.
 - **Sin ID Público**: No se emitirá `public_id` ni se permitirá el acceso vía `{id}`. Convertirlos en recursos direccionables se considera sobreingeniería (anti-pattern) para el estado actual del Core.
 - **Inmutabilidad de Interfaz**: Los permisos se definen en el Core/Módulos (Developer-driven). El Admin puede asignarlos a Roles, pero no "editar" el objeto permiso habitualmente.
@@ -228,28 +222,31 @@ A diferencia de Usuarios o Roles, los **Permissions** no se consideran "recursos
 
 > "Mínimo" = campos que siempre estarán. Agregar campos es non-breaking.
 
-| Endpoint                                                 | Mínimo garantizado                                                                                                                         |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `POST /auth/login` (200)                                 | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user`                                                                     |
-| `POST /auth/google/exchange` (200)                       | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user`                                                                     |
-| `POST /auth/api-keys/exchange` (200)                     | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user` (Header req: `X-API-Key`)                                           |
-| `GET /auth/me` (200)                                     | `data.id`, `data.email`                                                                                                                    |
-| `GET /admin/dashboard/summary` (200)                     | `data.metrics`, `data.recent_activity` (Contenido interno variable según permisos granulares del usuario autenticado)                      |
-| `GET /admin/users` (200)                                 | Paginación estándar                                                                                                                        |
-| `POST /admin/users` (201)                                | `data.id`, `data.name`, `data.email`, `data.status` (Req: pass min 12, mixedCase, numbers)                                                 |
-| `GET /admin/users/{id}` (200)                            | `data.id`, `data.name`, `data.email`, `data.status`                                                                                        |
-| `PUT /admin/users/{id}` (200)                            | `data.id`, `data.name`, `data.email`, `data.status` (Pass opcional, pero si se envía debe cumplir min 12, mixedCase, numbers)              |
-| `GET /devices/{id}/exports/specs/excel` (200)            | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64`                                                                   |
-| `GET /devices/{id}/exports/maintenance/excel` (200)      | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64`                                                                   |
-| `GET /devices/{id}/exports/maintenance/pdf` (200)        | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64`                                                                   |
-| `GET /components/{component}/photos` (200)               | `data[]` con `id`, `path`, `created_at`                                                                                                    |
-| `POST /components/{component}/photos` (201)              | `data.id`, `data.path`, `data.created_at`                                                                                                  |
-| `GET /components/{component}/photos/{photo}` (200)       | `data.id`, `data.path`, `data.created_at`                                                                                                  |
-| `PUT/PATCH /components/{component}/photos/{photo}` (200) | `data.id`, `data.path`, `data.created_at`                                                                                                  |
-| `DELETE /components/{component}/photos/{photo}` (200)    | `data.message`                                                                                                                             |
-| `POST /billing/checkout-session` (201)                   | `data.session_id`, `data.checkout_url`, `data.plan`                                                                                        |
-| `POST /billing/mobile/subscription-intent` (201)         | `data.customer_id`, `data.ephemeral_key`, `data.payment_intent_client_secret`, `data.subscription_id`, `data.plan`, `data.publishable_key` |
-| `POST /billing/webhooks/stripe` (200)                    | `data.received`                                                                                                                            |
+| Endpoint | Mínimo garantizado |
+| --- | --- |
+| `POST /auth/login` (200) | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user` |
+| `POST /auth/google/exchange` (200) | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user` |
+| `POST /auth/api-keys/exchange` (200) | `data.access_token`, `data.token_type`, `data.expires_in`, `data.user` (Header req: `X-API-Key`) |
+| `GET /auth/me` (200) | `data.id`, `data.email` |
+| `GET /admin/dashboard/summary` (200) | `data.metrics`, `data.recent_activity` (Contenido interno variable según permisos granulares del usuario autenticado) |
+| `GET /admin/users` (200) | Paginación estándar |
+| `POST /admin/users` (201) | `data.id`, `data.name`, `data.email`, `data.status` (Req: pass min 12, mixedCase, numbers) |
+| `GET /admin/users/{id}` (200) | `data.id`, `data.name`, `data.email`, `data.status` |
+| `PUT /admin/users/{id}` (200) | `data.id`, `data.name`, `data.email`, `data.status` (Pass opcional, pero si se envía debe cumplir min 12, mixedCase, numbers) |
+| `GET /devices/{id}/exports/specs/excel` (200) | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64` |
+| `GET /devices/{id}/exports/maintenance/excel` (200) | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64` |
+| `GET /devices/{id}/exports/maintenance/pdf` (200) | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64` |
+| `POST /devices/{id}/exports/maintenance/calendar` (200) | `data.format`, `data.file_name`, `data.mime_type`, `data.content_base64` |
+| `GET /components/{component}/photos` (200) | `data[]` con `id`, `path`, `created_at` |
+| `POST /components/{component}/photos` (201) | `data.id`, `data.path`, `data.created_at` |
+| `GET /components/{component}/photos/{photo}` (200) | `data.id`, `data.path`, `data.created_at` |
+| `PUT/PATCH /components/{component}/photos/{photo}` (200) | `data.id`, `data.path`, `data.created_at` |
+| `DELETE /components/{component}/photos/{photo}` (200) | `data.message` |
+| `POST /billing/checkout-session` (201) | `data.session_id`, `data.checkout_url`, `data.plan` |
+| `POST /billing/mobile/subscription-intent` (201) | `data.customer_id`, `data.ephemeral_key`, `data.payment_intent_client_secret`, `data.subscription_id`, `data.plan`, `data.publishable_key` |
+| `POST /billing/webhooks/stripe` (200) | `data.received` |
+| `GET /auth/legal-consents/latest` (200) | `data.required.terms_version`, `data.required.privacy_version`, `data.accepted` (objeto o `null`) |
+| `POST /auth/legal-consents/accept` (201) | `data.required`, `data.accepted.id`, `data.accepted.terms_version`, `data.accepted.privacy_version`, `data.accepted.accepted_at` |
 
 ---
 
@@ -264,24 +261,19 @@ A diferencia de Usuarios o Roles, los **Permissions** no se consideran "recursos
 ## 11) Reglas para Contract Tests
 
 ### A) Contrato valida interfaz, no lógica
-
 - Interfaz: rutas, shape mínimo, status, error.code, paginación.
 - Lógica: auditoría, revocación, prune, etc. → van en feature/security tests.
 
 ### B) Congelar mínimos, permitir expansión
-
 - ✅ `assertJsonStructure`, `assertJsonPath`
 - ❌ `assertExactJson` salvo casos muy justificados
 
 ### C) Nunca congelar `error.message`
-
 - Congelar: status + `error.code`
 - No congelar: texto
 
 ### D) Matriz de flags
-
 Los contracts de routing requieren tests ON/OFF para:
-
 - `KAAN_FEATURE_ADMIN`
 - `KAAN_FEATURE_AUDIT`
 - `KAAN_FEATURE_ADMIN_SECURITY`
@@ -295,14 +287,12 @@ Los contracts de routing requieren tests ON/OFF para:
 ## 12) Política de versionado (breaking vs non-breaking)
 
 ### Non-breaking
-
 - Agregar campos a respuestas existentes.
 - Agregar endpoints.
 - Agregar nuevos `error.code` (sin eliminar/alterar existentes).
 - Agregar permisos nuevos.
 
 ### Breaking (requiere bump mayor / `/api/v2`)
-
 - Eliminar/renombrar campos o cambiar tipos.
 - Cambiar status HTTP de un error existente.
 - Cambiar/eliminar un `error.code` existente.
@@ -315,7 +305,6 @@ Los contracts de routing requieren tests ON/OFF para:
 ## 13) Gobernanza de Cambios de Contrato (Obligatoria)
 
 Todo cambio que afecte cualquiera de estos elementos se considera cambio contractual y debe pasar esta política:
-
 - HTTP status
 - `error.code`
 - shape de request/response
@@ -325,7 +314,6 @@ Todo cambio que afecte cualquiera de estos elementos se considera cambio contrac
 > **Importante:** Cada cambio contractual debe reflejarse en los tres niveles de documentación: técnica (Level 1), integración frontend (Level 2) y producto (Level 3) si afecta el valor comercial.
 
 Checklist mínimo obligatorio por cambio:
-
 1. Actualizar este archivo (`docs/CONTRACTS.md`) con la nueva regla.
 2. Actualizar Swagger/OpenAPI (`app/Docs/*`) para reflejar exactamente el contrato.
 3. Actualizar/agregar tests de contrato o feature que validen el cambio.

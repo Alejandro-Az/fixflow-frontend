@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Platform, ScrollView } from 'react-native';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, ActivityIndicator, SafeAreaView } from '../../src/components/ui';
+import { Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, ActivityIndicator, SafeAreaView, ScrollView } from '../../src/components/ui';
 import { GoogleIcon } from '../../src/components/GoogleIcon';
 import apiClient from '../../src/api/client';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
+import { useGoogleAuth, GoogleAuthError } from '../../src/hooks/useGoogleAuth';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Square, CheckSquare } from 'lucide-react-native';
+import { Linking } from 'react-native';
 
 export default function RegisterScreen() {
     const [name, setName] = useState('');
@@ -19,13 +20,17 @@ export default function RegisterScreen() {
     
     const [errorMsg, setErrorMsg] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const setAuth = useAuthStore((state) => state.setAuth);
     const router = useRouter();
+    const { signIn: googleSignIn } = useGoogleAuth();
 
     const handleRegister = async () => {
-        setErrorMsg('');
-        setFieldErrors({});
+        if (!termsAccepted) {
+            setErrorMsg('Debes aceptar los términos y condiciones.');
+            return;
+        }
 
         if (!name || !email || !password || !passwordConfirmation) {
             setErrorMsg('Por favor llena todos los campos.');
@@ -101,19 +106,15 @@ export default function RegisterScreen() {
     const handleGoogleLogin = async () => {
         setErrorMsg('');
         setFieldErrors({});
+        
+        if (!termsAccepted) {
+            setErrorMsg('Debes aceptar los términos y condiciones para continuar.');
+            return;
+        }
+
         setGoogleLoading(true);
         try {
-            if (Platform.OS !== 'web') {
-                await GoogleSignin.hasPlayServices();
-            }
-            const response = await GoogleSignin.signIn();
-            const id_token = response.data?.idToken;
-
-            if (!id_token) {
-                setErrorMsg('No se recibió el token de Google.');
-                setGoogleLoading(false);
-                return;
-            }
+            const id_token = await googleSignIn();
 
             const backendResponse = await apiClient.post('/auth/google/exchange', {
                 id_token
@@ -127,13 +128,13 @@ export default function RegisterScreen() {
             }
 
         } catch (error: any) {
-            if (isErrorWithCode(error)) {
+            if (error instanceof GoogleAuthError) {
                 switch (error.code) {
-                    case statusCodes.SIGN_IN_CANCELLED:
+                    case 'CANCELLED':
                         break;
-                    case statusCodes.IN_PROGRESS:
+                    case 'IN_PROGRESS':
                         break;
-                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                    case 'NO_PLAY_SERVICES':
                         setErrorMsg('Google Play Services no disponible.');
                         break;
                     default:
@@ -260,7 +261,7 @@ export default function RegisterScreen() {
                     <TouchableOpacity 
                         onPress={handleRegister}
                         disabled={loading || googleLoading}
-                        className={`bg-primary rounded-lg py-4 items-center mt-6 mb-8 ${loading || googleLoading ? 'opacity-50' : 'active:opacity-80'}`}
+                        className={`bg-primary rounded-lg py-4 items-center mt-6 mb-4 ${loading || googleLoading ? 'opacity-50' : 'active:opacity-80'}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="#141313" />
@@ -268,6 +269,18 @@ export default function RegisterScreen() {
                             <Text className="text-[#141313] font-bold text-base">Crear cuenta</Text>
                         )}
                     </TouchableOpacity>
+
+                    <View className="mb-8 gap-4 px-2">
+                        <TouchableOpacity 
+                            className="flex-row items-center"
+                            onPress={() => setTermsAccepted(!termsAccepted)}
+                        >
+                            {termsAccepted ? <CheckSquare color="#6699cc" size={20} /> : <Square color="#8b919a" size={20} />}
+                            <Text className="text-textMuted ml-3 text-xs flex-1">
+                                Acepto los <Text className="text-primary font-medium" onPress={() => Linking.openURL('https://kaanforge.com/legal/terminos')}>Términos y condiciones</Text> y he leído el <Text className="text-primary font-medium" onPress={() => Linking.openURL('https://kaanforge.com/legal/privacidad')}>Aviso de Privacidad</Text>.
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     <View className="items-center">
                         <TouchableOpacity onPress={() => router.push('/login')}>

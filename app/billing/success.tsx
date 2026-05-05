@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View as RNView } from 'react-native';
 import { SafeAreaView, View, Text, TouchableOpacity, ActivityIndicator } from '../../src/components/ui';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2 } from 'lucide-react-native';
@@ -81,7 +80,7 @@ export default function BillingSuccessScreen() {
             <View className="w-full max-w-sm bg-surface border border-border rounded-2xl p-8 items-center">
 
                 {/* Icono */}
-                <RNView
+                <View
                     style={{
                         width: 80,
                         height: 80,
@@ -95,7 +94,7 @@ export default function BillingSuccessScreen() {
                     }}
                 >
                     <CheckCircle2 color={planColor} size={44} />
-                </RNView>
+                </View>
 
                 <Text className="text-text font-bold text-[22px] text-center mb-2">
                     ¡Bienvenido a FixFlow {planLabel}!
@@ -107,7 +106,7 @@ export default function BillingSuccessScreen() {
 
                 {/* Estado de sincronización */}
                 {syncing ? (
-                    <RNView
+                    <View
                         style={{
                             backgroundColor: planColor + '12',
                             borderRadius: 12,
@@ -122,17 +121,17 @@ export default function BillingSuccessScreen() {
                         }}
                     >
                         <ActivityIndicator color={planColor} size="small" />
-                        <RNView style={{ flex: 1 }}>
+                        <View style={{ flex: 1 }}>
                             <Text style={{ color: planColor, fontSize: 13, fontWeight: '600' }}>
                                 Confirmando con Stripe…
                             </Text>
                             <Text className="text-textMuted text-[11px]">
                                 Espera un momento mientras activamos tu plan.
                             </Text>
-                        </RNView>
-                    </RNView>
+                        </View>
+                    </View>
                 ) : (
-                    <RNView
+                    <View
                         style={{
                             backgroundColor: planColor + '12',
                             borderRadius: 12,
@@ -147,7 +146,7 @@ export default function BillingSuccessScreen() {
                         <Text style={{ color: planColor, fontSize: 13, fontWeight: '600' }}>
                             ✓ Plan {planLabel} activado
                         </Text>
-                    </RNView>
+                    </View>
                 )}
 
                 <TouchableOpacity
