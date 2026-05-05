@@ -1,12 +1,15 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Alert, ActivityIndicator, Modal, TouchableWithoutFeedback, View as RNView, Dimensions, TextInput } from 'react-native';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from '../../../src/components/ui';
+import { Alert, Modal, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, TextInput, ActivityIndicator } from '../../../src/components/ui';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Trash2, MoreVertical, Pencil, X, Lock } from 'lucide-react-native';
 import apiClient from '../../../src/api/client';
 import { useAuthStore } from '../../../src/store/useAuthStore';
 import { HeaderProfileMenu } from '../../../src/components/HeaderProfileMenu';
 import { CategoryRow, ComponentCategory } from '../../../components/ui/CategoryRow';
+import { exportCalendar } from '../../../src/utils/calendarExport';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar } from 'lucide-react-native';
 
 const CATEGORIES: { id: ComponentCategory; label: string }[] = [
     { id: 'cpu', label: 'Procesador' },
@@ -49,6 +52,12 @@ export default function DeviceDetailScreen() {
     const [editName, setEditName] = useState(deviceName as string);
     const [editing, setEditing] = useState(false);
     const [editError, setEditError] = useState("");
+    
+    // Calendar Export
+    const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+    const [exportingCalendar, setExportingCalendar] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
 
     const openOptionsMenu = () => {
         optionsBtnRef.current?.measure(
@@ -274,6 +283,30 @@ export default function DeviceDetailScreen() {
                         <Text className="text-[#39ff14] font-medium">Descargar Especificaciones (CSV)</Text>
                     </TouchableOpacity>
                 )}
+
+                <View className="mt-4 pt-4 border-t border-border">
+                    <View className="flex-row items-center mb-3">
+                        <Text className="text-textMuted text-[12px] uppercase font-semibold">Calendario de Mantenimiento</Text>
+                        {isFreePlan && <Lock color="#94918e" size={12} className="ml-2" />}
+                    </View>
+                    
+                    {isFreePlan ? (
+                        <TouchableOpacity
+                            onPress={() => Alert.alert('Premium', 'Actualiza a Pro para exportar el calendario de mantenimiento a tu dispositivo.')}
+                            className="bg-[#141313] border border-border rounded-lg py-3 px-4 items-center justify-center"
+                        >
+                            <Text className="text-[#94918e] font-medium">Solo disponible en plan Pro</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            onPress={() => setCalendarModalVisible(true)}
+                            className="bg-[#141313] border border-border rounded-lg py-3 px-4 flex-row items-center justify-center active:opacity-70"
+                        >
+                            <Calendar color="#6699cc" size={18} className="mr-2" />
+                            <Text className="text-[#6699cc] font-medium">Exportar a Calendario (.ics)</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -419,9 +452,9 @@ export default function DeviceDetailScreen() {
             {/* Modal Opciones */}
             <Modal visible={optionsVisible} transparent animationType="fade" onRequestClose={() => setOptionsVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setOptionsVisible(false)}>
-                    <RNView style={{ flex: 1 }}>
+                    <View style={{ flex: 1 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{
+                            <View style={{
                                 position: 'absolute',
                                 top: menuPos.top,
                                 right: menuPos.right,
@@ -437,35 +470,35 @@ export default function DeviceDetailScreen() {
                                 overflow: 'hidden',
                             }}>
                                 <TouchableOpacity onPress={() => { setOptionsVisible(false); setEditName(localDeviceName); setEditError(""); setEditVisible(true); }}>
-                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#444444' }}>
                                         <Pencil color="#e5e2e1" size={16} />
                                         <Text className="text-text font-medium text-sm">Editar nombre</Text>
-                                    </RNView>
+                                    </View>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => { setOptionsVisible(false); confirmDelete(); }}>
-                                    <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 }}>
                                         <Trash2 color="#ff8a80" size={16} />
                                         <Text className="text-[#ff8a80] font-medium text-sm">Eliminar equipo</Text>
-                                    </RNView>
+                                    </View>
                                 </TouchableOpacity>
-                            </RNView>
+                            </View>
                         </TouchableWithoutFeedback>
-                    </RNView>
+                    </View>
                 </TouchableWithoutFeedback>
             </Modal>
 
             {/* Modal Editar */}
             <Modal visible={editVisible} transparent animationType="fade" onRequestClose={() => setEditVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setEditVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
-                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <View style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-text font-bold text-lg">Editar equipo</Text>
                                     <TouchableOpacity onPress={() => setEditVisible(false)} className="active:opacity-60">
                                         <X color="#94918e" size={20} />
                                     </TouchableOpacity>
-                                </RNView>
+                                </View>
                                 <Text className="text-textMuted text-sm mb-2">Nombre del equipo</Text>
                                 <TextInput
                                     value={editName}
@@ -473,7 +506,7 @@ export default function DeviceDetailScreen() {
                                     placeholder="Ej: Computadora Principal..."
                                     placeholderTextColor="#94918e"
                                     autoFocus
-                                    style={{ backgroundColor: '#141313', borderWidth: 1, borderColor: '#444444', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, color: '#e5e2e1', fontSize: 15, marginBottom: 8 }}
+                                    className="bg-[#141313] border border-[#444444] rounded-lg px-4 py-3 text-[#e5e2e1] text-[15px] mb-2"
                                 />
                                 {editError ? <Text className="text-[#ffb4ab] text-sm mb-3">{editError}</Text> : <RNView style={{ height: 12 }} />}
                                 <RNView style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
@@ -493,10 +526,10 @@ export default function DeviceDetailScreen() {
             {/* Modal Eliminar */}
             <Modal visible={deleteVisible} transparent animationType="fade" onRequestClose={() => setDeleteVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setDeleteVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
-                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <View style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-[#ffb4ab] font-bold text-lg">Eliminar equipo</Text>
                                     <TouchableOpacity onPress={() => setDeleteVisible(false)} className="active:opacity-60">
                                         <X color="#94918e" size={20} />
@@ -513,6 +546,82 @@ export default function DeviceDetailScreen() {
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={handleDeleteDevice} disabled={deleting} className={`flex-1 py-3 rounded-lg bg-[#cc3333] border border-[#cc3333] items-center ${deleting ? 'opacity-50' : 'active:opacity-80'}`}>
                                         {deleting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Eliminar</Text>}
+                                    </TouchableOpacity>
+                                </RNView>
+                            </RNView>
+                        </TouchableWithoutFeedback>
+                    </RNView>
+                </TouchableWithoutFeedback>
+            </Modal>
+            {/* Modal Calendario */}
+            <Modal visible={calendarModalVisible} transparent animationType="fade" onRequestClose={() => setCalendarModalVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setCalendarModalVisible(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <View style={{ backgroundColor: '#2a2a2a', borderRadius: 14, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                    <Text className="text-text font-bold text-lg">Exportar Calendario</Text>
+                                    <TouchableOpacity onPress={() => setCalendarModalVisible(false)} className="active:opacity-60">
+                                        <X color="#94918e" size={20} />
+                                    </TouchableOpacity>
+                                </RNView>
+                                
+                                <Text className="text-textMuted text-sm mb-4">
+                                    Selecciona la fecha de inicio para los recordatorios de mantenimiento recurrente.
+                                </Text>
+
+                                <View className="bg-background border border-border rounded-lg p-4 mb-6">
+                                    <Text className="text-textMuted text-xs mb-2">Fecha de inicio</Text>
+                                    {Platform.OS === 'android' ? (
+                                        <TouchableOpacity 
+                                            onPress={() => setShowDatePicker(true)}
+                                            className="flex-row items-center justify-between py-2"
+                                        >
+                                            <Text className="text-text text-lg">{selectedDate.toLocaleDateString()}</Text>
+                                            <Calendar color="#6699cc" size={20} />
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <DateTimePicker
+                                            value={selectedDate}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(_: any, date?: Date) => date && setSelectedDate(date)}
+                                            themeVariant="dark"
+                                        />
+                                    )}
+
+                                    {showDatePicker && Platform.OS === 'android' && (
+                                        <DateTimePicker
+                                            value={selectedDate}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(_: any, date?: Date) => {
+                                                setShowDatePicker(false);
+                                                if (date) setSelectedDate(date);
+                                            }}
+                                        />
+                                    )}
+                                </View>
+
+                                <RNView style={{ flexDirection: 'row', gap: 10 }}>
+                                    <TouchableOpacity 
+                                        onPress={() => setCalendarModalVisible(false)} 
+                                        className="flex-1 py-3 rounded-lg border border-border items-center active:opacity-70"
+                                    >
+                                        <Text className="text-textMuted font-medium">Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        onPress={async () => {
+                                            setExportingCalendar(true);
+                                            const dateStr = selectedDate.toISOString().split('T')[0];
+                                            await exportCalendar(deviceId as string, localDeviceName, dateStr);
+                                            setExportingCalendar(false);
+                                            setCalendarModalVisible(false);
+                                        }} 
+                                        disabled={exportingCalendar}
+                                        className={`flex-1 py-3 rounded-lg bg-primary items-center ${exportingCalendar ? 'opacity-50' : 'active:opacity-80'}`}
+                                    >
+                                        {exportingCalendar ? <ActivityIndicator color="#141313" /> : <Text className="text-[#141313] font-bold">Exportar</Text>}
                                     </TouchableOpacity>
                                 </RNView>
                             </RNView>

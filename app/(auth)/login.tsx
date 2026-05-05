@@ -6,6 +6,8 @@ import { GoogleIcon } from '../../src/components/GoogleIcon';
 import { ActivityIndicator, KeyboardAvoidingView, Text, TextInput, TouchableOpacity, View } from '../../src/components/ui';
 import { GoogleAuthError, useGoogleAuth } from '../../src/hooks/useGoogleAuth';
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { Square, CheckSquare, ExternalLink } from 'lucide-react-native';
+import { Linking } from 'react-native';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -13,6 +15,7 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const setAuth = useAuthStore((state) => state.setAuth);
     const router = useRouter();
@@ -40,6 +43,11 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         setErrorMsg('');
+        if (!termsAccepted) {
+            setErrorMsg('Debes aceptar los términos y condiciones.');
+            return;
+        }
+
         if (!email || !password) {
             setErrorMsg('Por favor llena todos los campos.');
             return;
@@ -90,6 +98,10 @@ export default function LoginScreen() {
 
     const handleGoogleLogin = async () => {
         setErrorMsg('');
+        if (!termsAccepted) {
+            setErrorMsg('Debes aceptar los términos y condiciones para continuar.');
+            return;
+        }
         setGoogleLoading(true);
         try {
             const id_token = await googleSignIn();
@@ -208,8 +220,8 @@ export default function LoginScreen() {
 
                 <TouchableOpacity
                     onPress={handleLogin}
-                    disabled={loading}
-                    className={`bg-surface border border-border rounded-lg py-4 items-center mb-8 ${loading ? 'opacity-50' : 'active:opacity-80'}`}
+                    disabled={loading || googleLoading}
+                    className={`bg-surface border border-border rounded-lg py-4 items-center mb-8 ${(loading || googleLoading) ? 'opacity-50' : 'active:opacity-80'}`}
                 >
                     {loading ? (
                         <ActivityIndicator color="#e5e2e1" />
@@ -217,6 +229,18 @@ export default function LoginScreen() {
                         <Text className="text-text font-semibold text-base">Iniciar sesión</Text>
                     )}
                 </TouchableOpacity>
+
+                <View className="mb-8 gap-4">
+                    <TouchableOpacity 
+                        className="flex-row items-center"
+                        onPress={() => setTermsAccepted(!termsAccepted)}
+                    >
+                        {termsAccepted ? <CheckSquare color="#6699cc" size={20} /> : <Square color="#8b919a" size={20} />}
+                        <Text className="text-textMuted ml-3 text-xs flex-1">
+                            Acepto los <Text className="text-primary font-medium" onPress={() => Linking.openURL('https://kaanforge.com/legal/terminos')}>Términos y condiciones</Text> y he leído el <Text className="text-primary font-medium" onPress={() => Linking.openURL('https://kaanforge.com/legal/privacidad')}>Aviso de Privacidad</Text>.
+                        </Text>
+                    </TouchableOpacity>
+                </View>
 
                 <View className="items-center">
                     <TouchableOpacity onPress={() => router.push('/register')}>

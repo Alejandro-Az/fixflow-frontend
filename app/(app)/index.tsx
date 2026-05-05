@@ -2,11 +2,9 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     Modal,
     TouchableWithoutFeedback,
-    View as RNView,
     Dimensions,
-    TextInput as RNTextInput,
 } from 'react-native';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from '../../src/components/ui';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput } from '../../src/components/ui';
 import { CircleUser, Plus, ArrowRight, LogOut, User, X, Eye, Lock } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
 import { useAuthStore } from '../../src/store/useAuthStore';
@@ -220,9 +218,9 @@ export default function DashboardScreen() {
             {/* ─── Modal: Crear Workspace ─── */}
             <Modal visible={createVisible} transparent animationType="fade" onRequestClose={() => setCreateVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setCreateVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{
+                            <View style={{
                                 backgroundColor: '#2a2a2a',
                                 borderRadius: 14,
                                 borderWidth: 1,
@@ -232,7 +230,7 @@ export default function DashboardScreen() {
                                 maxWidth: 440,
                             }}>
                                 {/* Encabezado del modal */}
-                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-text font-bold text-lg">Nuevo workspace</Text>
                                     <TouchableOpacity onPress={() => setCreateVisible(false)} className="active:opacity-60">
                                         <X color="#94918e" size={20} />
@@ -241,23 +239,13 @@ export default function DashboardScreen() {
 
                                 {/* Campo de nombre */}
                                 <Text className="text-textMuted text-sm mb-2">Nombre del workspace</Text>
-                                <RNTextInput
+                                <TextInput
                                     value={wsName}
                                     onChangeText={(t) => { setWsName(t); setCreateError(''); }}
                                     placeholder="Ej: Casa, Oficina, Cliente X..."
                                     placeholderTextColor="#94918e"
                                     autoFocus
-                                    style={{
-                                        backgroundColor: '#141313',
-                                        borderWidth: 1,
-                                        borderColor: '#444444',
-                                        borderRadius: 8,
-                                        paddingHorizontal: 14,
-                                        paddingVertical: 12,
-                                        color: '#e5e2e1',
-                                        fontSize: 15,
-                                        marginBottom: 8,
-                                    }}
+                                    className="bg-[#141313] border border-[#444444] rounded-lg px-4 py-3 text-[#e5e2e1] text-[15px] mb-2"
                                 />
 
                                 {/* Error */}
@@ -295,9 +283,9 @@ export default function DashboardScreen() {
             {/* ─── Modal: Preview de Equipos ─── */}
             <Modal visible={previewVisible} transparent animationType="slide" onRequestClose={() => setPreviewVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setPreviewVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{
+                            <View style={{
                                 backgroundColor: '#2a2a2a',
                                 borderTopLeftRadius: 20,
                                 borderTopRightRadius: 20,
@@ -307,7 +295,7 @@ export default function DashboardScreen() {
                                 maxHeight: '80%',
                             }}>
                                 {/* Encabezado del modal */}
-                                <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-text font-bold text-lg">
                                         Equipos en {previewWorkspace?.name}
                                     </Text>

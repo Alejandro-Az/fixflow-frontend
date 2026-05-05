@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
@@ -8,26 +8,12 @@ import {
     configureReanimatedLogger,
     ReanimatedLogLevel,
 } from "react-native-reanimated";
+import { StripeProvider } from "@stripe/stripe-react-native";
 
 import "../global.css";
 
 import { useAuthStore } from "../src/store/useAuthStore";
-
-const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
-
-function MaybeStripeProvider({ children }: { children: ReactNode }) {
-  if (Platform.OS === "web" || !STRIPE_PK) return <>{children}</>;
-  const { StripeProvider } = require("@stripe/stripe-react-native");
-  return (
-    <StripeProvider
-      publishableKey={STRIPE_PK}
-      merchantIdentifier="merchant.com.kaanforge.fixflow"
-      urlScheme="fixflow"
-    >
-      {children}
-    </StripeProvider>
-  );
-}
+import { LegalConsentGuard } from "../src/components/LegalConsentGuard";
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -67,18 +53,24 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <MaybeStripeProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: "#141313" },
-          }}
-        >
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" />
-        </Stack>
+      <StripeProvider
+        publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''}
+        merchantIdentifier="merchant.com.kaanforge.fixflow"
+        urlScheme="fixflowfrontend"
+      >
+        <LegalConsentGuard>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "#141313" },
+            }}
+          >
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" />
+          </Stack>
+        </LegalConsentGuard>
         <StatusBar style="light" />
-      </MaybeStripeProvider>
+      </StripeProvider>
     </SafeAreaProvider>
   );
 }

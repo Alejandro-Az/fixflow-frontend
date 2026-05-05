@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Modal, TouchableWithoutFeedback, View as RNView, TextInput as RNTextInput } from 'react-native';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from '../../src/components/ui';
+import { Alert, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, TextInput } from '../../src/components/ui';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, User, Mail, Lock, CreditCard, ChevronRight, Eye, EyeOff, X, Shield } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
@@ -202,9 +202,9 @@ export default function ProfileScreen() {
             {/* Modal: Cambiar contraseña */}
             <Modal visible={pwVisible} transparent animationType="fade" onRequestClose={() => setPwVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setPwVisible(false)}>
-                    <RNView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                         <TouchableWithoutFeedback onPress={() => {}}>
-                            <RNView style={{ backgroundColor: '#2a2a2a', borderRadius: 16, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
+                            <View style={{ backgroundColor: '#2a2a2a', borderRadius: 16, borderWidth: 1, borderColor: '#444444', padding: 24, width: '100%', maxWidth: 440 }}>
 
                                 <RNView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                                     <Text className="text-text font-bold text-[18px]">Cambiar contraseña</Text>
@@ -216,14 +216,14 @@ export default function ProfileScreen() {
                                 {/* Contraseña actual */}
                                 <Text className="text-textMuted text-xs uppercase font-semibold tracking-wider mb-2">Contraseña actual</Text>
                                 <RNView style={{ position: 'relative', marginBottom: 14 }}>
-                                    <RNTextInput
-                                        value={currentPw}
-                                        onChangeText={(t) => { setCurrentPw(t); setPwError(''); }}
-                                        secureTextEntry={!showCurrent}
-                                        placeholder="Tu contraseña actual"
-                                        placeholderTextColor="#94918e"
-                                        style={{ backgroundColor: '#141313', borderWidth: 1, borderColor: '#444', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, color: '#e5e2e1', fontSize: 15, paddingRight: 44 }}
-                                    />
+                                <TextInput
+                                    value={currentPw}
+                                    onChangeText={(t) => { setCurrentPw(t); setPwError(''); }}
+                                    secureTextEntry={!showCurrent}
+                                    placeholder="Tu contraseña actual"
+                                    placeholderTextColor="#94918e"
+                                    className="bg-[#141313] border border-[#444] rounded-lg px-4 py-3 text-[#e5e2e1] text-[15px] pr-11"
+                                />
                                     <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={{ position: 'absolute', right: 12, top: 12 }}>
                                         {showCurrent ? <EyeOff color="#94918e" size={20} /> : <Eye color="#94918e" size={20} />}
                                     </TouchableOpacity>
@@ -232,14 +232,14 @@ export default function ProfileScreen() {
                                 {/* Nueva contraseña */}
                                 <Text className="text-textMuted text-xs uppercase font-semibold tracking-wider mb-2">Nueva contraseña</Text>
                                 <RNView style={{ position: 'relative', marginBottom: 14 }}>
-                                    <RNTextInput
-                                        value={newPw}
-                                        onChangeText={(t) => { setNewPw(t); setPwError(''); }}
-                                        secureTextEntry={!showNew}
-                                        placeholder="Mín. 12 chars, mayúscula, número"
-                                        placeholderTextColor="#94918e"
-                                        style={{ backgroundColor: '#141313', borderWidth: 1, borderColor: '#444', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, color: '#e5e2e1', fontSize: 15, paddingRight: 44 }}
-                                    />
+                                <TextInput
+                                    value={newPw}
+                                    onChangeText={(t) => { setNewPw(t); setPwError(''); }}
+                                    secureTextEntry={!showNew}
+                                    placeholder="Mín. 12 chars, mayúscula, número"
+                                    placeholderTextColor="#94918e"
+                                    className="bg-[#141313] border border-[#444] rounded-lg px-4 py-3 text-[#e5e2e1] text-[15px] pr-11"
+                                />
                                     <TouchableOpacity onPress={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 12, top: 12 }}>
                                         {showNew ? <EyeOff color="#94918e" size={20} /> : <Eye color="#94918e" size={20} />}
                                     </TouchableOpacity>
@@ -248,14 +248,14 @@ export default function ProfileScreen() {
                                 {/* Confirmar nueva */}
                                 <Text className="text-textMuted text-xs uppercase font-semibold tracking-wider mb-2">Confirmar nueva contraseña</Text>
                                 <RNView style={{ position: 'relative', marginBottom: 6 }}>
-                                    <RNTextInput
-                                        value={confirmPw}
-                                        onChangeText={(t) => { setConfirmPw(t); setPwError(''); }}
-                                        secureTextEntry={!showConfirm}
-                                        placeholder="Repite la nueva contraseña"
-                                        placeholderTextColor="#94918e"
-                                        style={{ backgroundColor: '#141313', borderWidth: 1, borderColor: '#444', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, color: '#e5e2e1', fontSize: 15, paddingRight: 44 }}
-                                    />
+                                <TextInput
+                                    value={confirmPw}
+                                    onChangeText={(t) => { setConfirmPw(t); setPwError(''); }}
+                                    secureTextEntry={!showConfirm}
+                                    placeholder="Repite la nueva contraseña"
+                                    placeholderTextColor="#94918e"
+                                    className="bg-[#141313] border border-[#444] rounded-lg px-4 py-3 text-[#e5e2e1] text-[15px] pr-11"
+                                />
                                     <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 12, top: 12 }}>
                                         {showConfirm ? <EyeOff color="#94918e" size={20} /> : <Eye color="#94918e" size={20} />}
                                     </TouchableOpacity>
